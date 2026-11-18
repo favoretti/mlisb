@@ -15,4 +15,4 @@ while [ "$n" -gt 0 ]; do
   set -- "$@" "$arg"
 done
 # Going through LaunchServices is what grants the sandboxed app access to these paths.
-exec open -b net.favoretti.mlisb "$@"
+exec open -b "${MLISB_BUNDLE_ID:-net.favoretti.mlisb}" "$@"
