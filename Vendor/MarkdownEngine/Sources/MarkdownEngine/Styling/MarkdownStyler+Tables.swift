@@ -248,7 +248,8 @@ extension MarkdownStyler {
                 parsed: parsed,
                 ctx: ctx,
                 appearance: renderAppearance,
-                availableWidth: containerWidth
+                // mlisb: a table that needs it may use the free margin before its cells wrap or it scrolls.
+                availableWidth: containerWidth + ctx.configuration.wideTableOverflow
             )
             if rendered { renderedCount += 1 }
             let imageBounds = CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height)

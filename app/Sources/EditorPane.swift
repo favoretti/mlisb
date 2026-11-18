@@ -61,7 +61,9 @@ struct EditorPane: View {
         config.revealAllSyntax = sourceMode
         // A centered column of at most the chosen width that shrinks with the pane. (The engine's
         // own readingWidth is a fixed width and clips in a narrow window.)
-        config.textInsets = TextInsets(horizontal: ReadingSettings.sideInset(paneWidth: width, width: lineWidth), vertical: 12)
+        let inset = ReadingSettings.sideInset(paneWidth: width, width: lineWidth)
+        config.textInsets = TextInsets(horizontal: inset, vertical: 12)
+        config.wideTableOverflow = inset - ReadingSettings.sidePadding
         // Nothing may change what the user typed.
         config.lists.arrowReplacementEnabled = false
         config.spellChecking.automaticQuoteSubstitution = false

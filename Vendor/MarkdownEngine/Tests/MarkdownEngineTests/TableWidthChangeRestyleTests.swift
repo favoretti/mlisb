@@ -989,4 +989,25 @@ struct TableWidthChangeRestyleTests {
         #expect(settled.image === live.image)
         #expect(recorder.count == countAtTrackingEnd)
     }
+
+    // mlisb
+    @Test("A table too wide for the column uses the allowed margin before it wraps or scrolls")
+    func wideTableUsesTheAllowedMargin() throws {
+        // A 900pt window with 300pt margins leaves a 300pt text column.
+        let harness = try Harness(source: Self.wrappingTable, horizontalTextInset: 300)
+        defer { harness.close() }
+        let confined = try #require(Harness.renderedTable(in: harness.textView))
+        #expect(confined.bounds.width <= 301)
+
+        let coordinator = try #require(harness.textView.delegate as? NativeTextViewCoordinator)
+        coordinator.configuration.wideTableOverflow = 200
+        harness.textView.configuration.wideTableOverflow = 200
+        harness.textView.wideTableOverflowDidChange()
+        Harness.drain(mode: .default, duration: 0.2)
+
+        let spread = try #require(Harness.renderedTable(in: harness.textView))
+        #expect(abs(spread.bounds.width - 500) <= 1)
+        let overlay = try #require(Harness.visibleWideTable(in: harness.textView))
+        #expect(abs(overlay.frame.width - 500) <= 1)
+    }
 }

@@ -304,7 +304,7 @@ extension NativeTextView {
             let columnLeft = breakout ? anchorInHost.x - hostBounds.minX : anchorTopLeft.x
             let overlayFrame: NSRect = breakout
                 ? NSRect(x: hostBounds.minX, y: anchorInHost.y, width: hostBounds.width, height: totalHeight)
-                : NSRect(x: columnLeft, y: anchorTopLeft.y, width: containerWidth, height: totalHeight)
+                : NSRect(x: columnLeft, y: anchorTopLeft.y, width: containerWidth + configuration.wideTableOverflow, height: totalHeight)  // mlisb
             // Breakout: table starts at the text column's left edge; the left margin is scrollable space.
             let leftContentInset: CGFloat = breakout ? max(0, columnLeft) : 0
 

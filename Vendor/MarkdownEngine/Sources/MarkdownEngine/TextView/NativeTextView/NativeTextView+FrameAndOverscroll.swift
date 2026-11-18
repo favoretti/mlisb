@@ -301,6 +301,9 @@ extension NativeTextView {
     /// rendering runs at the next run-loop opportunity without a fixed delay.
     /// Width writes in the same turn collapse into one restyle that reads the
     /// latest container width.
+    /// mlisb: the margin beside the text column changed while the column kept its width.
+    func wideTableOverflowDidChange() { scheduleTableWidthChangeUpdate() }
+
     private func scheduleTableWidthChangeUpdate() {
         guard !pendingTableWidthChangeUpdate else { return }
         pendingTableWidthChangeUpdate = true

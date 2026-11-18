@@ -109,6 +109,7 @@ Tool…** and run the one line it shows. `mlisb hook install` adds one hook to
   a Quick Look preview for images and PDFs.
 - **GitHub Flavored Markdown.** Tables, task lists, alerts, footnotes, front matter, reference
   links, strikethrough, autolinks and a safe subset of HTML.
+- **Wide tables** spread into the free space beside the text before they wrap tightly or scroll.
 - **Saves by itself**, one second after you stop typing, in place.
 - **Export** to HTML, PDF, JPEG and ePub. **Copy as** plain text, rich text, Markdown or HTML.
 - **Quick Look.** Press Space on a Markdown file in Finder for a rendered preview.

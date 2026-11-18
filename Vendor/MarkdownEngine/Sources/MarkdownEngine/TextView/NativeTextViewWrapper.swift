@@ -616,6 +616,12 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             || abs(textView.textContainerInset.height - desiredTextInset.height) > 0.5 {
             textView.textContainerInset = desiredTextInset
         }
+        // mlisb: tables are laid out for the column plus this room, so re-render them when it changes.
+        if abs(textView.configuration.wideTableOverflow - configuration.wideTableOverflow) > 0.5 {
+            textView.configuration.wideTableOverflow = configuration.wideTableOverflow
+            context.coordinator.configuration.wideTableOverflow = configuration.wideTableOverflow
+            textView.wideTableOverflowDidChange()
+        }
         // Refresh services/theme when the embedder hands us a new configuration
         // (e.g. when the available wiki-link targets change). Cheap pointer-/
         // value-based comparison; full equality isn't required because the

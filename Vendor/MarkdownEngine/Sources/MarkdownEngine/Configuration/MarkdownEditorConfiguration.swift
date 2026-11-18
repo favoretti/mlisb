@@ -48,6 +48,8 @@ public struct MarkdownEditorConfiguration: Sendable {
     public var textInsets: TextInsets
     /// Centered reading-column width; wide tables break out to full width. nil = full width (default).
     public var readingWidth: CGFloat?
+    /// mlisb: how far a table too wide for the text column may run into the margin on its right.
+    public var wideTableOverflow: CGFloat = 0
     /// Whether table images reflow at every width change during live window resize.
     /// Set to false to retain their images while dragging and reflow synchronously
     /// when resizing ends, including any final width delivered by the host afterward.
