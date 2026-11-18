@@ -159,7 +159,7 @@ extension MarkdownTokenizer {
     /// tokenizes differently under a different extension set.
     static func cachedBlockTokens(kind: BlockKind, sub: String, registry: ExtensionRegistry = .empty) -> [MarkdownToken] {
         // mlisb: the same text can be a fence under a list item and a paragraph elsewhere, so a fence's kind is part of the key.
-        let text = kind == .fencedCode ? "\u{1E}" + sub : sub
+        let text = kind == .fencedCode || kind == .frontMatter ? "\u{1E}\(kind == .frontMatter ? "F" : "")" + sub : sub
         let key = registry.fingerprint.isEmpty ? text : registry.fingerprint + "\u{1F}" + text
         blockTokenLock.lock()
         if let cached = blockTokenCache[key] {
@@ -173,7 +173,7 @@ extension MarkdownTokenizer {
         // parse inlines over their CONTENT only (the fence lines are syntax —
         // a `$x$` in the info string must not become a latex token).
         let inline: [MarkdownToken]
-        if kind == .fencedCode {
+        if kind == .fencedCode || kind == .frontMatter {  // mlisb: opaque
             inline = []
         } else if case .ext = kind, let block = blockLevel.first {
             let ns = sub as NSString

@@ -46,13 +46,14 @@ indirect enum BlockNode: Equatable {
     case table(range: NSRange)
     case thematicBreak(range: NSRange)
     case blank(range: NSRange)
+    case frontMatter(range: NSRange)   // mlisb
     case ext(ExtensionBlockNode)
 
     var range: NSRange {
         switch self {
         case .paragraph(let r, _), .heading(_, let r, _, _), .blockquote(let r, _),
              .list(let r, _), .codeBlock(let r), .blockLatex(let r), .table(let r),
-             .thematicBreak(let r), .blank(let r):
+             .thematicBreak(let r), .blank(let r), .frontMatter(let r):
             return r
         case .ext(let node):
             return node.range
@@ -189,6 +190,8 @@ enum DocumentAST {
             return .thematicBreak(range: block.range)
         case .blank:
             return .blank(range: block.range)
+        case .frontMatter:
+            return .frontMatter(range: block.range)
         case .ext(let id):
             return extensionBlock(id: id, range: block.range, ns, scoped: scoped, registry: registry)
         }

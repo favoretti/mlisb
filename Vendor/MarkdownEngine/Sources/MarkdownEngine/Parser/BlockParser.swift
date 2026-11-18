@@ -26,6 +26,7 @@ import Foundation
 enum BlockKind: Equatable {
     case paragraph       // inline-bearing
     case setextHeading   // mlisb: paragraph lines + a `===` / `---` underline line
+    case frontMatter     // mlisb: `---` … `---` at the very start of the document — opaque metadata
     case heading         // single ATX line (`# …`), inline-bearing content
     case blockquote      // consecutive `>` lines, inline-bearing per line
     case list            // consecutive list-item lines (`-`/`*`/`+` or `1.`/`1)`)
@@ -237,7 +238,7 @@ enum BlockParser {
 
         // 5. Reparse just the window substring, shift to absolute new coords.
         let windowText = newNS.substring(with: NSRange(location: winStart, length: winEndNew - winStart))
-        let reparsed = computeBlocks(windowText, registry: registry).map { $0.shifted(by: winStart) }
+        let reparsed = computeBlocks(windowText, registry: registry, atDocumentStart: winStart == 0).map { $0.shifted(by: winStart) }
         // A trailing fence/latex/extension block reaching the window end might continue past it.
         if let last = reparsed.last, NSMaxRange(last.range) >= winEndNew {
             switch last.kind {
@@ -282,7 +283,8 @@ enum BlockParser {
         return (result, reparsed.count)
     }
 
-    static func computeBlocks(_ text: String, registry: ExtensionRegistry = .empty) -> [Block] {
+    /// `atDocumentStart` is false for a window reparsed from the middle of a document (front matter only opens at offset 0).
+    static func computeBlocks(_ text: String, registry: ExtensionRegistry = .empty, atDocumentStart: Bool = true) -> [Block] {
         let nsText = text as NSString
         let length = nsText.length
         guard length > 0 else { return [] }
@@ -334,13 +336,23 @@ enum BlockParser {
             return nil
         }
 
+        /// mlisb: line index of the `---` closing front matter that opens on line 0.
+        func frontMatterEnd() -> Int? {
+            guard atDocumentStart, lines.count > 1, isFrontMatterFence(lineText(0)) else { return nil }
+            return (1..<lines.count).first { isFrontMatterFence(lineText($0)) }
+        }
+
         // 2. Classify + group.
         var blocks: [Block] = []
         var i = 0
         while i < lines.count {
             let line = lineText(i)
 
-            if isBlank(line) {
+            if i == 0, let end = frontMatterEnd() {  // mlisb
+                blocks.append(Block(kind: .frontMatter, range: union(lines[0...end])))
+                i = end + 1
+
+            } else if isBlank(line) {
                 var end = i
                 while end + 1 < lines.count, isBlank(lineText(end + 1)) { end += 1 }
                 blocks.append(Block(kind: .blank, range: union(lines[i...end])))
@@ -435,6 +447,11 @@ enum BlockParser {
         guard t.count >= 3, let first = t.first,
               first == "-" || first == "*" || first == "_" else { return false }
         return t.allSatisfy { $0 == first }
+    }
+
+    /// mlisb: a front-matter fence line — exactly `---` (trailing spaces allowed).
+    private static func isFrontMatterFence(_ line: String) -> Bool {
+        line.trimmingCharacters(in: CharacterSet(charactersIn: " \t\r\n")) == "---" && line.hasPrefix("---")
     }
 
     /// mlisb: a setext underline — 3+ `=` or 3+ `-` after at most 3 spaces, nothing else but trailing space.

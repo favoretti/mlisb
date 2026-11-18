@@ -109,6 +109,12 @@ public enum MarkdownHTMLRenderer {
         case .blank:
             return nil
 
+        case .frontMatter(let range):  // mlisb
+            var lines = ns.substring(with: range).components(separatedBy: "\n")
+            if lines.last == "" { lines.removeLast() }
+            let body = lines.dropFirst().dropLast().joined(separator: "\n")
+            return "<pre class=\"front-matter\"><code>\(escape(body))</code></pre>"
+
         case .ext(let node):
             guard let ext = env.byID[node.extensionID] else {
                 return "<p>\(escape(ns.substring(with: node.range).trimmingCharacters(in: .newlines)))</p>"

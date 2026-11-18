@@ -105,7 +105,7 @@ enum MarkdownASTStyler {
         }
         for block in blocks {
             switch block {
-            case .codeBlock(let range): ranges.append(range)
+            case .codeBlock(let range), .frontMatter(let range): ranges.append(range)  // mlisb
             case .paragraph(_, let inlines), .heading(_, _, _, let inlines), .blockquote(_, let inlines):
                 walk(inlines)
             case .list(_, let items):
@@ -730,6 +730,8 @@ enum MarkdownASTStyler {
 
         case .codeBlock(let range):
             styleCodeBlock(range: range, ctx: ctx, into: &attrs)
+        case .frontMatter(let range):  // mlisb
+            styleFrontMatter(range: range, ctx: ctx, into: &attrs)
         case .thematicBreak(let range):
             styleThematicBreak(range: range, ctx: ctx, into: &attrs)
         case .ext(let node):
@@ -1034,7 +1036,7 @@ enum MarkdownASTStyler {
                 for item in items { shrinkInlineMarkers(item.inlines, ctx: ctx, into: &attrs) }
             case .ext(let node):
                 shrinkInlineMarkers(node.inlines, ctx: ctx, into: &attrs)
-            case .codeBlock, .blockLatex, .table, .thematicBreak, .blank:
+            case .codeBlock, .blockLatex, .table, .thematicBreak, .blank, .frontMatter:
                 break
             }
         }

@@ -10,6 +10,33 @@ import Foundation
 
 extension MarkdownASTStyler {
 
+    // MARK: - Front matter
+
+    /// Quiet metadata: monospaced, dimmed, never parsed for markdown. The source is always shown, so the
+    /// caret and source mode change nothing.
+    static func styleFrontMatter(range: NSRange, ctx: Ctx, into attrs: inout [StyledRange]) {
+        var block = range
+        while block.length > 0, [0x0A, 0x0D].contains(ctx.ns.character(at: NSMaxRange(block) - 1)) { block.length -= 1 }
+        guard block.length > 0 else { return }
+        let lineHeight = ceil(ctx.codeFont.ascender - ctx.codeFont.descender + ctx.codeFont.leading)
+        let para = NSMutableParagraphStyle()
+        para.minimumLineHeight = lineHeight
+        para.maximumLineHeight = lineHeight
+        para.lineBreakMode = .byCharWrapping
+        let last = NSMutableParagraphStyle()
+        last.setParagraphStyle(para)
+        last.paragraphSpacing = ctx.baseParagraphSpacing
+        attrs.append((ctx.ns.paragraphRange(for: block), [.paragraphStyle: para]))
+        attrs.append((ctx.ns.lineRange(for: NSRange(location: NSMaxRange(block) - 1, length: 0)), [.paragraphStyle: last]))
+        attrs.append((block, [.font: ctx.codeFont, .foregroundColor: ctx.theme.mutedText, .spellingState: 0]))
+        // The two `---` fence lines sit a step quieter than the metadata between them.
+        let quiet = ctx.theme.mutedText.withAlphaComponent(0.6)
+        let open = ctx.ns.lineRange(for: NSRange(location: block.location, length: 0))
+        let close = ctx.ns.lineRange(for: NSRange(location: NSMaxRange(block) - 1, length: 0))
+        attrs.append((open, [.foregroundColor: quiet]))
+        attrs.append((close, [.foregroundColor: quiet]))
+    }
+
     // MARK: - Setext headings
 
     /// A heading whose single marker is an underline line (`=`/`-`) rather than an ATX `#` run.
@@ -105,6 +132,7 @@ extension MarkdownASTStyler {
             if case .blockquote(let range, _) = block, let alert = alertOpening(inBlockquote: range, ns: ns) {
                 out.append(alert.marker)
             }
+            if case .frontMatter(let range) = block { out.append(range) }
         }
         return out
     }
