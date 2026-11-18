@@ -81,7 +81,7 @@ enum MarkdownASTStyler {
 
         // Text/regex passes (AST-agnostic); AST code ranges drive the "skip inside code" checks.
         let codeRanges = collectCodeRanges(in: blocks)
-        let checkboxRanges = collectCheckboxRanges(in: blocks)
+        let checkboxRanges = collectCheckboxRanges(in: blocks) + gfmExcludedRanges(in: blocks, ns: ns)  // mlisb
         let linkRanges = collectLinkRanges(in: blocks)
         styleAutoLinks(ctx: ctx, codeRanges: codeRanges, linkRanges: linkRanges, into: &attrs)
         styleIncompleteLinkBrackets(ctx: ctx, codeRanges: codeRanges, checkboxRanges: checkboxRanges, into: &attrs)
@@ -768,6 +768,7 @@ enum MarkdownASTStyler {
     /// Per-line blockquote: indent, mute content, hide/show `>` markers, tag first char with bar level.
     private static func styleBlockquote(range: NSRange, ctx: Ctx, into attrs: inout [StyledRange]) {
         let indentPerLevel = MarkdownTextLayoutFragment.blockquoteIndentPerLevel
+        let alert = alertOpening(inBlockquote: range, ns: ctx.ns)  // mlisb
         var lineStart = range.location
         let end = NSMaxRange(range)
         while lineStart < end {
@@ -819,6 +820,10 @@ enum MarkdownASTStyler {
             }
             // Whole line, not just the first char, so each soft-wrapped visual line
             attrs.append((tokenRange, [.blockquoteLevel: level]))
+            if let alert {  // mlisb
+                styleAlertLine(kind: alert.kind, marker: alert.marker, isFirst: line.location == range.location,
+                               tokenRange: tokenRange, ctx: ctx, into: &attrs)
+            }
         }
     }
 

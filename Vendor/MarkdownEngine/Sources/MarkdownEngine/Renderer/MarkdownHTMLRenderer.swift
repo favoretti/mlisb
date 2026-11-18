@@ -126,11 +126,20 @@ public enum MarkdownHTMLRenderer {
     /// markers, so strip the markers per line and re-parse the content clean.
     private static func renderBlockquote(range: NSRange, ns: NSString, env: Env) -> String {
         let raw = ns.substring(with: range)
-        let stripped = raw
+        var lines = raw
             .components(separatedBy: "\n")
             .map(stripQuoteMarkers)
             .filter { !$0.isEmpty }
-            .joined(separator: "\n")
+        // mlisb: a `[!NOTE]` first line makes a GitHub-style alert (title paragraph, then the body).
+        if let first = lines.first,
+           let kind = MarkdownASTStyler.AlertKind(marker: first.trimmingCharacters(in: .whitespacesAndNewlines)),
+           MarkdownASTStyler.alertOpening(inBlockquote: range, ns: ns) != nil {
+            lines.removeFirst()
+            let body = lines.joined(separator: "\n")
+            let inner = body.isEmpty ? "" : "<p>\(renderInlines(InlineParser.parse(body, registry: env.registry), ns: body as NSString, env: env))</p>"
+            return "<div class=\"markdown-alert markdown-alert-\(kind.name)\"><p class=\"markdown-alert-title\">\(kind.title)</p>\(inner)</div>"
+        }
+        let stripped = lines.joined(separator: "\n")
         let inlines = InlineParser.parse(stripped, registry: env.registry)
         return "<blockquote>\(renderInlines(inlines, ns: stripped as NSString, env: env))</blockquote>"
     }

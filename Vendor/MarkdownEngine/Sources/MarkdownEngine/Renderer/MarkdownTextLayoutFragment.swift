@@ -29,6 +29,10 @@ extension NSAttributedString.Key {
     /// Int nesting level (1-based) of a blockquote line; the fragment
     /// paints that many vertical bars in the left gutter.
     static let blockquoteLevel = NSAttributedString.Key("BlockquoteLevel")
+    /// mlisb: NSColor — bar colour of a blockquote line (alerts); absent = the muted default.
+    static let blockquoteBarColor = NSAttributedString.Key("BlockquoteBarColor")
+    /// mlisb: String — title drawn in bold, in the line's bar colour, over a hidden `[!NOTE]` marker.
+    static let alertTitle = NSAttributedString.Key("AlertTitle")
     /// Marks a bullet-list marker char (`-`/`*`/`+`) whose glyph is hidden so
     /// the fragment can paint a `•` in its place. Set to `true`.
     static let bulletMarker = NSAttributedString.Key("BulletListMarker")
@@ -190,6 +194,7 @@ final class MarkdownTextLayoutFragment: NSTextLayoutFragment {
 
         // 6. Blockquote bars (left gutter, behind nothing — text is indented)
         drawBlockquoteBars(at: point, in: context)
+        drawAlertTitles(at: point, in: context)  // mlisb
     }
 
     // MARK: - Helpers
@@ -787,7 +792,7 @@ final class MarkdownTextLayoutFragment: NSTextLayoutFragment {
         defer { NSGraphicsContext.restoreGraphicsState() }
         let nsContext = NSGraphicsContext(cgContext: context, flipped: true)
         NSGraphicsContext.current = nsContext
-        theme.mutedText.withAlphaComponent(0.5).setFill()
+        let defaultBar = theme.mutedText.withAlphaComponent(0.5)
 
         let fragLocation = fragmentNSRange?.location ?? 0
         let leftEdge = point.x - layoutFragmentFrame.origin.x
@@ -802,6 +807,8 @@ final class MarkdownTextLayoutFragment: NSTextLayoutFragment {
             if let level = ts.attribute(.blockquoteLevel, at: docStart, effectiveRange: nil) as? Int {
                 // tb.origin.y is already relative to this layout fragment.
                 let barY = point.y + tb.origin.y
+                // mlisb: alerts carry their own bar colour.
+                ((ts.attribute(.blockquoteBarColor, at: docStart, effectiveRange: nil) as? NSColor) ?? defaultBar).setFill()
                 for i in 0..<level {
                     let barX = leftEdge + CGFloat(i) * indentPerLevel + indentPerLevel * 0.25
                     NSBezierPath(rect: CGRect(
@@ -809,6 +816,26 @@ final class MarkdownTextLayoutFragment: NSTextLayoutFragment {
                     )).fill()
                 }
             }
+        }
+    }
+
+    // MARK: - Alert titles (mlisb)
+
+    /// Paint the bold alert title over the hidden `[!NOTE]` marker text.
+    private func drawAlertTitles(at point: CGPoint, in context: CGContext) {
+        guard let ts = textStorage, let range = fragmentNSRange, range.length > 0 else { return }
+        NSGraphicsContext.saveGraphicsState()
+        defer { NSGraphicsContext.restoreGraphicsState() }
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
+        ts.enumerateAttribute(.alertTitle, in: range, options: []) { [weak self] value, attrRange, _ in
+            guard let self, let title = value as? NSString,
+                  let pos = self.drawPosition(forDocumentCharAt: attrRange.location, point: point) else { return }
+            let textView = self.textLayoutManager?.textContainer?.textView
+            let base = (textView as? NativeTextView)?.baseFont ?? textView?.font ?? NSFont.systemFont(ofSize: NSFont.systemFontSize)
+            let font = NSFontManager.shared.convert(base, toHaveTrait: .boldFontMask)
+            let color = (ts.attribute(.blockquoteBarColor, at: attrRange.location, effectiveRange: nil) as? NSColor) ?? .labelColor
+            title.draw(at: CGPoint(x: pos.x, y: pos.baselineY - font.ascender),
+                       withAttributes: [.font: font, .foregroundColor: color])
         }
     }
 
