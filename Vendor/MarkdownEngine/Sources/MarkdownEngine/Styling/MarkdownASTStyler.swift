@@ -80,9 +80,9 @@ enum MarkdownASTStyler {
         shrinkInactiveMarkers(in: blocks, ctx: ctx, into: &attrs)
 
         // Text/regex passes (AST-agnostic); AST code ranges drive the "skip inside code" checks.
-        let codeRanges = collectCodeRanges(in: blocks)
-        let checkboxRanges = collectCheckboxRanges(in: blocks) + gfmExcludedRanges(in: blocks, ns: ns)  // mlisb
-        let linkRanges = collectLinkRanges(in: blocks)
+        let codeRanges = mergedRanges(collectCodeRanges(in: blocks))  // mlisb
+        let checkboxRanges = mergedRanges(collectCheckboxRanges(in: blocks) + gfmExcludedRanges(in: blocks, ns: ns))  // mlisb
+        let linkRanges = mergedRanges(collectLinkRanges(in: blocks))  // mlisb
         styleAutoLinks(ctx: ctx, codeRanges: codeRanges, linkRanges: linkRanges, into: &attrs)
         styleIncompleteLinkBrackets(ctx: ctx, codeRanges: codeRanges, checkboxRanges: checkboxRanges, into: &attrs)
         return attrs
@@ -106,6 +106,8 @@ enum MarkdownASTStyler {
         for block in blocks {
             switch block {
             case .codeBlock(let range), .frontMatter(let range): ranges.append(range)  // mlisb
+            case .html(let range, .comment, _, _): ranges.append(range)  // mlisb
+            case .html(_, _, _, let inlines): walk(inlines)   // mlisb
             case .paragraph(_, let inlines), .heading(_, _, _, let inlines), .blockquote(_, let inlines):
                 walk(inlines)
             case .list(_, let items):
@@ -118,8 +120,28 @@ enum MarkdownASTStyler {
         return ranges
     }
 
+    /// mlisb: `codeRanges` is sorted and disjoint (`mergedRanges`), so each lookup is a binary search instead of
+    /// a scan — with many definitions, footnotes or HTML tags the exclusion lists run to thousands of entries.
     private static func isInCode(_ range: NSRange, _ codeRanges: [NSRange]) -> Bool {
-        codeRanges.contains { NSIntersectionRange($0, range).length > 0 }
+        var lo = 0, hi = codeRanges.count
+        while lo < hi {                                   // first range starting at or after range's end
+            let m = (lo + hi) / 2
+            if codeRanges[m].location < NSMaxRange(range) { lo = m + 1 } else { hi = m }
+        }
+        return lo > 0 && NSIntersectionRange(codeRanges[lo - 1], range).length > 0
+    }
+
+    /// mlisb: sorted by location with overlapping ranges merged (adjacent ranges stay apart).
+    private static func mergedRanges(_ ranges: [NSRange]) -> [NSRange] {
+        var out: [NSRange] = []
+        for r in ranges.sorted(by: { $0.location < $1.location }) where r.length > 0 {
+            if let last = out.last, r.location < NSMaxRange(last) {
+                out[out.count - 1].length = max(NSMaxRange(last), NSMaxRange(r)) - last.location
+            } else {
+                out.append(r)
+            }
+        }
+        return out
     }
 
     /// Full ranges of markdown links `[text](url)` and wiki links `[[…]]`. The NSDataDetector
@@ -148,7 +170,7 @@ enum MarkdownASTStyler {
         for block in blocks {
             switch block {
             case .paragraph(_, let inlines), .heading(_, _, _, let inlines), .blockquote(_, let inlines),
-                 .footnoteDefinition(_, _, let inlines):  // mlisb
+                 .footnoteDefinition(_, _, let inlines), .html(_, _, _, let inlines):  // mlisb
                 walk(inlines)
             case .list(_, let items):
                 for item in items { walk(item.inlines) }
@@ -178,9 +200,10 @@ enum MarkdownASTStyler {
     // Built once, reused: rebuilding these on every restyle cost 43ms (detector)
     // + 78ms (6 regexes) on a 346k note with hits=0 (ENG-8g1b/c).
     private static let autoLinkDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+    // mlisb: the bracket text is bounded (64 characters) so a line of `[` cannot make every start scan to the line end.
     private static let incompleteLinkPatterns: [NSRegularExpression] =
-        [#"\[\]"#, #"\[\[\]\]"#, #"\[[^\]\r\n]*$"#, #"\[[^\]\r\n]+\](?!\()"#,
-         #"\[[^\]\r\n]+\]\([^)\r\n]*$"#, #"\[[^\]\r\n]+\]\(\)"#].compactMap { regex($0, false) }
+        [#"\[\]"#, #"\[\[\]\]"#, #"\[[^\]\r\n]{0,64}$"#, #"\[[^\]\r\n]{1,64}\](?!\()"#,
+         #"\[[^\]\r\n]{1,64}\]\([^)\r\n]{0,64}$"#, #"\[[^\]\r\n]{1,64}\]\(\)"#].compactMap { regex($0, false) }
 
     /// Tag a thematic-break line for a full-width rule (AST-driven); suppressed while the caret edits it.
     ///
@@ -734,6 +757,8 @@ enum MarkdownASTStyler {
             styleCodeBlock(range: range, ctx: ctx, into: &attrs)
         case .frontMatter(let range):  // mlisb
             styleFrontMatter(range: range, ctx: ctx, into: &attrs)
+        case .html(let range, let kind, let markers, let inlines):  // mlisb
+            styleHTMLBlock(range: range, kind: kind, markers: markers, inlines: inlines, font: font, ctx: ctx, into: &attrs)
         case .linkDefinition(let range):  // mlisb
             styleDefinitionLine(range: range, marker: range, ctx: ctx, into: &attrs)
         case .footnoteDefinition(let range, let marker, let inlines):  // mlisb
@@ -1049,6 +1074,9 @@ enum MarkdownASTStyler {
                 shrinkInlineMarkers(node.inlines, ctx: ctx, into: &attrs)
             case .footnoteDefinition(_, _, let inlines):  // mlisb
                 shrinkInlineMarkers(inlines, ctx: ctx, into: &attrs)
+            case .html(let range, _, let markers, let inlines):  // mlisb
+                if !ctx.isActive(range) { shrink(markers, ctx: ctx, into: &attrs) }
+                shrinkInlineMarkers(inlines, ctx: ctx, into: &attrs)
             case .codeBlock, .blockLatex, .table, .thematicBreak, .blank, .frontMatter, .linkDefinition:
                 break
             }
@@ -1106,7 +1134,7 @@ enum MarkdownASTStyler {
         }
     }
 
-    private static func adding(_ extra: NSFontDescriptor.SymbolicTraits, to font: NSFont) -> NSFont {
+    static func adding(_ extra: NSFontDescriptor.SymbolicTraits, to font: NSFont) -> NSFont {
         let merged = font.fontDescriptor.symbolicTraits.union(extra)
         return NSFont(descriptor: font.fontDescriptor.withSymbolicTraits(merged), size: font.pointSize) ?? font
     }

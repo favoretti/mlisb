@@ -29,6 +29,10 @@ extension MarkdownASTStyler {
         attrs.append((node.range, [.spellingState: 0]))
         let active = ctx.isActive(node.range)
         for marker in node.markers where active { attrs.append((marker, [.foregroundColor: ctx.theme.mutedText])) }
+        if node.extensionID.hasPrefix(GFMInline.htmlPrefix) {
+            styleHTMLInline(node, font: font, active: active, ctx: ctx, into: &attrs)
+            return
+        }
         switch node.extensionID {
         case GFMInline.footnoteID:
             let id = ctx.ns.substring(with: node.contentRange)
@@ -55,6 +59,116 @@ extension MarkdownASTStyler {
             }
             styleInlines(node.children, font: font, ctx: ctx, into: &attrs)
         }
+    }
+
+    // MARK: - Raw HTML (safe subset)
+
+    private static func styleHTMLInline(_ node: ExtensionInlineNode, font: NSFont, active: Bool, ctx: Ctx,
+                                        into attrs: inout [StyledRange]) {
+        let name = String(node.extensionID.dropFirst(GFMInline.htmlPrefix.count))
+        let muted = ctx.theme.mutedText
+        var inner = font
+        var content: [NSAttributedString.Key: Any] = [:]
+        switch name {
+        case "br":
+            // The last tag character is widened to a full line by the facade (`.gfmHTMLBreak`), so the text after it wraps.
+            attrs.append((NSRange(location: NSMaxRange(node.range) - 1, length: 1), [.gfmHTMLBreak: true]))
+            return
+        case "img":
+            attrs.append((node.range, [.foregroundColor: muted]))   // overridden when the image is drawn
+            return
+        case "a":
+            let target = node.target ?? ""
+            let url = URL(string: target.contains("://") ? target : "https://\(target)")
+            if active {
+                content = [.foregroundColor: ctx.theme.link.withAlphaComponent(ctx.config.link.activeLinkAlpha)]
+            } else if let url {
+                content = [.link: url, .underlineStyle: NSUnderlineStyle.single.rawValue,
+                           .foregroundColor: ctx.theme.link, .gfmLinkTarget: target]
+            }
+        case "code", "kbd":
+            inner = ctx.codeFont
+            content = [.font: ctx.codeFont, .backgroundColor: ctx.codeBackground]
+        case "b", "strong":
+            inner = adding(.bold, to: font); content = [.font: inner]
+        case "i", "em":
+            inner = adding(.italic, to: font); content = [.font: inner]
+        case "sub", "sup":
+            inner = NSFont(descriptor: font.fontDescriptor, size: max(6, round(font.pointSize * 0.75))) ?? font
+            content = [.font: inner, .baselineOffset: (name == "sup" ? 1 : -1) * round(font.pointSize * 0.3)]
+        case "s", "del":
+            content = [.strikethroughStyle: NSUnderlineStyle.single.rawValue]
+        case "u":
+            content = [.underlineStyle: NSUnderlineStyle.single.rawValue]
+        case "mark":
+            content = [.backgroundColor: NSColor.systemYellow.withAlphaComponent(0.35)]
+        default: break
+        }
+        if !content.isEmpty { attrs.append((node.contentRange, content)) }
+        styleInlines(node.children, font: inner, ctx: ctx, into: &attrs)
+    }
+
+    /// Block-level HTML: comments dim, `<details>` tag lines and the `<summary>` / `<hN>` / aligned-container tags
+    /// hide away from the caret; a summary reads as a disclosure title, a heading like its ATX equivalent, a container
+    /// takes its alignment. Content between `<details>` tags is ordinary markdown, always shown.
+    static func styleHTMLBlock(range: NSRange, kind: GFMHTML.BlockKind, markers: [NSRange], inlines: [InlineNode],
+                               font: NSFont, ctx: Ctx, into attrs: inout [StyledRange]) {
+        var block = range
+        while block.length > 0, [0x0A, 0x0D].contains(ctx.ns.character(at: NSMaxRange(block) - 1)) { block.length -= 1 }
+        guard block.length > 0 else { return }
+        let active = ctx.isActive(range)
+        var inner = font
+        var content = NSRange(location: block.location, length: 0)
+        if markers.count == 2 {
+            content = NSRange(location: NSMaxRange(markers[0]), length: markers[1].location - NSMaxRange(markers[0]))
+        }
+        switch kind {
+        case .comment:
+            attrs.append((block, [.foregroundColor: ctx.theme.mutedText, .spellingState: 0]))
+            return
+        case .detailsTag:
+            break
+        case .summary:
+            inner = adding(.bold, to: font)
+            let para = NSMutableParagraphStyle()
+            para.paragraphSpacingBefore = ctx.baseParagraphSpacing
+            para.paragraphSpacing = ctx.baseParagraphSpacing / 2
+            attrs.append((ctx.ns.paragraphRange(for: block), [.paragraphStyle: para]))
+            attrs.append((content, [.font: inner]))
+        case .heading(let level):
+            let multiplier = ctx.config.headings.fontMultiplier(for: level)
+            let base = NSFont(name: ctx.fontName, size: ctx.baseFont.pointSize * multiplier) ?? .systemFont(ofSize: ctx.baseFont.pointSize * multiplier)
+            inner = adding(.bold, to: base)
+            let lineHeight = ceil(inner.ascender - inner.descender + inner.leading) + 1
+            let para = NSMutableParagraphStyle()
+            para.minimumLineHeight = lineHeight
+            para.maximumLineHeight = lineHeight
+            para.paragraphSpacingBefore = inner.pointSize * ctx.config.headings.topSpacingEm(for: level)
+            para.paragraphSpacing = ctx.baseParagraphSpacing
+            attrs.append((ctx.ns.paragraphRange(for: block), [.paragraphStyle: para]))
+            attrs.append((content, [.font: inner]))
+        case .aligned(let align):
+            let para = NSMutableParagraphStyle()
+            para.alignment = align == "center" ? .center : (align == "right" ? .right : (align == "justify" ? .justified : .left))
+            para.paragraphSpacing = ctx.baseParagraphSpacing
+            attrs.append((ctx.ns.paragraphRange(for: block), [.paragraphStyle: para]))
+        }
+        if active {
+            for marker in markers { attrs.append((marker, [.foregroundColor: ctx.theme.mutedText])) }
+        } else {
+            // A line holding nothing but a tag collapses with it.
+            let collapsed = NSMutableParagraphStyle()
+            collapsed.maximumLineHeight = 1
+            collapsed.paragraphSpacing = 0
+            collapsed.paragraphSpacingBefore = 0
+            for marker in markers {
+                let line = ctx.ns.lineRange(for: marker)
+                if ctx.ns.substring(with: line).trimmingCharacters(in: .whitespacesAndNewlines) == ctx.ns.substring(with: marker) {
+                    attrs.append((line, [.paragraphStyle: collapsed]))
+                }
+            }
+        }
+        styleInlines(inlines, font: inner, ctx: ctx, into: &attrs)
     }
 
     // MARK: - Front matter
@@ -188,7 +302,8 @@ extension MarkdownASTStyler {
         }
         for block in blocks {
             switch block {
-            case .paragraph(_, let i), .heading(_, _, _, let i), .blockquote(_, let i), .footnoteDefinition(_, _, let i): walk(i)
+            case .paragraph(_, let i), .heading(_, _, _, let i), .blockquote(_, let i), .footnoteDefinition(_, _, let i),
+                 .html(_, _, _, let i): walk(i)
             case .list(_, let items): items.forEach { walk($0.inlines) }
             default: break
             }
@@ -196,6 +311,7 @@ extension MarkdownASTStyler {
                 out.append(alert.marker)
             }
             if case .frontMatter(let range) = block { out.append(range) }
+            if case .html(let range, .comment, _, _) = block { out.append(range) }
             if case .linkDefinition(let range) = block { out.append(range) }
             if case .footnoteDefinition(_, let marker, _) = block { out.append(marker) }
         }

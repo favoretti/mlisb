@@ -50,7 +50,7 @@ enum BlockLevelTokenizer {
         case .blockLatex:  return blockLatex(in: sub)
         case .ext(let id): return extensionBlock(in: sub, id: id,
                                                  fence: registry.blockEntry(for: id)?.fence ?? "")
-        case .paragraph, .list, .thematicBreak, .blank, .setextHeading, .frontMatter, .linkDefinition, .footnoteDefinition:  // mlisb
+        case .paragraph, .list, .thematicBreak, .blank, .setextHeading, .frontMatter, .linkDefinition, .footnoteDefinition, .htmlBlock:  // mlisb
             // Safety-net table scan; tables/block LaTeX are their own blocks now, inline `$$…$$` stays plain.
             return table(in: sub)
         }

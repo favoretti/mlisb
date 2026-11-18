@@ -48,6 +48,17 @@ enum InlineASTAdapter {
         case .imageEmbed(let range, let target, let markers):
             result.append(MarkdownToken(kind: .imageEmbed, range: range, contentRange: target, markerRanges: markers))
 
+        case .ext(let node) where node.extensionID == GFMInline.htmlPrefix + "img":
+            // mlisb: an HTML <img> is an image link whose "url" is the src value, so the image pass draws it.
+            let src = node.contentRange
+            let start = node.range.location
+            result.append(MarkdownToken(
+                kind: .imageLink, range: node.range,
+                contentRange: NSRange(location: start + 1, length: src.location - start - 1),
+                markerRanges: [NSRange(location: start, length: 1),
+                               NSRange(location: src.location, length: 0), NSRange(location: src.location, length: 0),
+                               NSRange(location: NSMaxRange(src), length: NSMaxRange(node.range) - NSMaxRange(src))]))
+
         case .ext(let node):
             result.append(MarkdownToken(kind: .extensionSpan(node.extensionID), range: node.range,
                                         contentRange: node.contentRange, markerRanges: node.markers))

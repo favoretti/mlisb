@@ -740,6 +740,10 @@ extension NativeTextViewCoordinator {
             if BlockParser.isSetextUnderline(line) { isRule = true; stop = true }
         }
         if isRule { return true }
+        // mlisb: HTML comments and aligned containers pair an opener with a distant closer, like a fence.
+        let lowered = windowText.lowercased()
+        if lowered.contains("<!--") || lowered.contains("-->") || lowered.contains("<p") || lowered.contains("<div")
+            || lowered.contains("</p") || lowered.contains("</div") { return true }
         // mlisb: a definition line changes how every use of its label renders.
         if ReferenceTable.touchesDefinition(in: text, range: window) { return true }
         return fences.contains { windowText.contains($0.fence) }

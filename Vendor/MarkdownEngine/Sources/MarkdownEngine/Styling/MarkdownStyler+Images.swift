@@ -57,7 +57,22 @@ extension MarkdownStyler {
 
             let minWidth = imageEmbedConfig.minimumWidth
             let imageSize = image.size
-            let targetWidth = min(max(imageSize.width, minWidth), maxWidth)
+            var targetWidth = min(max(imageSize.width, minWidth), maxWidth)
+            // mlisb: an HTML <img width="…"> asks for a width; its enclosing `<p align>` aligns it.
+            var alignment = NSTextAlignment.left
+            if ctx.nsText.character(at: token.range.location) == 0x3C {
+                if let tag = GFMHTML.tag(ctx.nsText, at: token.range.location, end: NSMaxRange(token.range)),
+                   let width = tag.attribute("width")?.value {
+                    let digits = Double(width.trimmingCharacters(in: CharacterSet(charactersIn: "px%"))) ?? 0
+                    let requested = width.hasSuffix("%") ? maxWidth * CGFloat(digits) / 100 : CGFloat(digits)
+                    if requested > 0 { targetWidth = min(max(requested, minWidth), maxWidth) }
+                }
+                switch GFMHTML.enclosingAlignment(of: token.range.location, in: ctx.nsText) {
+                case "center": alignment = .center
+                case "right": alignment = .right
+                default: break
+                }
+            }
             let scale = imageSize.width > 0 ? targetWidth / imageSize.width : 1
             let displayWidth = imageSize.width * scale
             let displayHeight = imageSize.height * scale
@@ -73,7 +88,7 @@ extension MarkdownStyler {
                     imageBounds: imageBounds,
                     paragraphSpacingBefore: imageEmbedConfig.paragraphSpacing,
                     paragraphSpacing: imageEmbedConfig.paragraphSpacing,
-                    alignment: .left,
+                    alignment: alignment,
                     mode: .visibleSource(imageGap: imageEmbedConfig.imageGap),
                     ctx: ctx,
                     attrs: &attrs
@@ -86,7 +101,7 @@ extension MarkdownStyler {
                     imageBounds: imageBounds,
                     paragraphSpacingBefore: imageEmbedConfig.paragraphSpacing,
                     paragraphSpacing: imageEmbedConfig.paragraphSpacing,
-                    alignment: .left,
+                    alignment: alignment,
                     mode: .collapsedSource(markerTexts: ["![", "]", "(", ")"]),
                     ctx: ctx,
                     attrs: &attrs

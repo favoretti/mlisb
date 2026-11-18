@@ -29,6 +29,7 @@ enum BlockKind: Equatable {
     case frontMatter     // mlisb: `---` … `---` at the very start of the document — opaque metadata
     case linkDefinition  // mlisb: `[label]: target "title"` — one line, opaque
     case footnoteDefinition // mlisb: `[^id]: text` — one line, inline-bearing after the marker
+    case htmlBlock       // mlisb: a safe-subset HTML block (comment, details/summary, h1–h6, aligned p/div) — see GFMHTML
     case heading         // single ATX line (`# …`), inline-bearing content
     case blockquote      // consecutive `>` lines, inline-bearing per line
     case list            // consecutive list-item lines (`-`/`*`/`+` or `1.`/`1)`)
@@ -167,6 +168,11 @@ enum BlockParser {
                 return true                                              // ```
             } else if buf[i] == 0x7E, i + 2 < end, buf[i + 1] == 0x7E, buf[i + 2] == 0x7E {   // mlisb: ~~~
                 return true
+            } else if buf[i] == 0x3C, i + 1 < end {   // mlisb: `<!--`, `<p`, `<div`, `</p`, `</div` pair with a distant closer
+                let n = buf[i + 1] == 0x2F && i + 2 < end ? buf[i + 2] | 0x20 : buf[i + 1] | 0x20
+                if buf[i + 1] == 0x21 || n == 0x70 || n == 0x64 { return true }
+            } else if buf[i] == 0x2D, i + 2 < end, buf[i + 1] == 0x2D, buf[i + 2] == 0x3E {   // mlisb: `-->`
+                return true
             }
             // Extension fences pair with a distant partner exactly like ``` —
             // an edit touching one must force the full reparse too.
@@ -244,7 +250,7 @@ enum BlockParser {
         // A trailing fence/latex/extension block reaching the window end might continue past it.
         if let last = reparsed.last, NSMaxRange(last.range) >= winEndNew {
             switch last.kind {
-            case .fencedCode, .blockLatex, .ext, .table: return nil   // mlisb: a table takes following rows
+            case .fencedCode, .blockLatex, .ext, .table, .htmlBlock: return nil   // mlisb: a table takes following rows; an HTML block may continue
             case .paragraph:
                 // The edit may have dissolved the separator that used to end
                 // this paragraph (backspace-joining two paragraphs): if the
@@ -303,31 +309,46 @@ enum BlockParser {
 
         func lineText(_ i: Int) -> String { nsText.substring(with: lines[i]) }
 
+        /// Failed closer searches, so a run of unclosed openers costs one scan, not one each: an opener of the
+        /// same kind at a later line, at least as long, inside the scanned stretch cannot find a closer either.
+        struct FenceMiss: Hashable { let char: unichar; let depth: Int; let indent: Int }
+        var fenceMisses: [FenceMiss: (minLength: Int, from: Int, until: Int)] = [:]   // mlisb
+
         /// Line index of the fence closing a code block opened at `start`; nil when `start` is not a
         /// fence opener or it is unclosed (an unclosed fence stays ordinary text).
         func fenceCloseIndex(from start: Int) -> Int? {  // mlisb: ``` and ~~~, indented, quoted
             guard let open = FenceScanner.opening(in: nsText, line: lines[start]) else { return nil }
             if open.quoteDepth == 0, open.indent >= 4, !underListItem(start) { return nil }
+            let key = FenceMiss(char: open.char, depth: open.quoteDepth, indent: open.indent >= 4 ? open.indent : 0)
+            if let miss = fenceMisses[key], start > miss.from, start < miss.until, open.length >= miss.minLength { return nil }
             var scan = start + 1
             while scan < lines.count {
                 switch FenceScanner.role(of: lines[scan], in: nsText, after: open) {
                 case .closer: return scan
-                case .exit: return nil
+                case .exit:
+                    fenceMisses[key] = (open.length, start, scan)
+                    return nil
                 case .content: scan += 1
                 }
             }
+            fenceMisses[key] = (open.length, start, lines.count)
             return nil
         }
 
-        /// Whether the nearest column-0 line above `idx` is a list item (blank lines skipped).
-        func underListItem(_ idx: Int) -> Bool {  // mlisb
-            var j = idx - 1
-            while j >= 0 {
-                let t = lineText(j)
-                if let f = t.first, f != " ", f != "\t", f != "\n", f != "\r" { return isListItem(t) }
-                j -= 1
+        /// Whether the nearest column-0 line above each line is a list item (blank lines skipped); one pass, on first use.
+        var underListItems: [Bool]?  // mlisb
+        func underListItem(_ idx: Int) -> Bool {
+            if underListItems == nil {
+                var state = false
+                var table = [Bool](repeating: false, count: lines.count)
+                for k in 0..<lines.count {
+                    table[k] = state
+                    let t = lineText(k)
+                    if let f = t.first, f != " ", f != "\t", f != "\n", f != "\r" { state = isListItem(t) }
+                }
+                underListItems = table
             }
-            return false
+            return underListItems![idx]
         }
 
         /// Line index of the `$$` closing a block-LaTeX run opened at `start`; nil if none.
@@ -338,6 +359,9 @@ enum BlockParser {
             while j < lines.count { if lineText(j).contains("$$") { return j }; j += 1 }
             return nil
         }
+
+        let htmlMisses = GFMHTML.Misses()   // mlisb
+        func htmlBlock(at i: Int) -> GFMHTML.Block? { GFMHTML.block(in: nsText, lines: lines, first: i, misses: htmlMisses) }
 
         /// mlisb: line index of the `---` closing front matter that opens on line 0.
         func frontMatterEnd() -> Int? {
@@ -354,6 +378,10 @@ enum BlockParser {
             if i == 0, let end = frontMatterEnd() {  // mlisb
                 blocks.append(Block(kind: .frontMatter, range: union(lines[0...end])))
                 i = end + 1
+
+            } else if let html = htmlBlock(at: i) {  // mlisb
+                blocks.append(Block(kind: .htmlBlock, range: union(lines[i...html.lastLine])))
+                i = html.lastLine + 1
 
             } else if isBlank(line) {
                 var end = i
@@ -435,6 +463,7 @@ enum BlockParser {
                     // block-LaTeX run, or an extension fence interrupts it —
                     // an unclosed opener stays part of the paragraph.
                     if fenceCloseIndex(from: end + 1) != nil { break }
+                    if htmlBlock(at: end + 1) != nil { break }   // mlisb
                     if end + 2 < lines.count, isTableStart(header: next, delimiter: lineText(end + 2)) { break }  // mlisb
                     if isBlockLatexOpen(next), blockLatexCloseIndex(from: end + 1) != nil { break }
                     if registry.blockEntry(opening: next) != nil { break }

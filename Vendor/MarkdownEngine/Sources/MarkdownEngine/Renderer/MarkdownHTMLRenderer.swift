@@ -112,7 +112,21 @@ public enum MarkdownHTMLRenderer {
         case .linkDefinition:  // mlisb: definitions produce no output of their own
             return nil
 
-        case .footnoteDefinition(let range, let marker, let inlines):  // mlisb
+        case .html(_, let kind, let markers, let inlines):  // mlisb
+            let inner = renderInlines(inlines, ns: ns, env: env)
+            switch kind {
+            case .comment: return nil
+            case .detailsTag:
+                let tag = ns.substring(with: markers[0]).lowercased()
+                return tag.hasPrefix("</") ? "</details>" : (tag.contains("open") ? "<details open>" : "<details>")
+            case .summary: return "<summary>\(inner)</summary>"
+            case .heading(let level): return "<h\(level)>\(inner)</h\(level)>"
+            case .aligned(let align):
+                let name = ns.substring(with: markers[0]).lowercased().hasPrefix("<div") ? "div" : "p"
+                return "<\(name) align=\"\(escape(align))\">\(inner.trimmingCharacters(in: .whitespacesAndNewlines))</\(name)>"
+            }
+
+        case .footnoteDefinition(_, let marker, let inlines):  // mlisb
             let id = ns.substring(with: NSRange(location: marker.location + 2, length: marker.length - 4))
             return "<div class=\"footnote-definition\" id=\"fn-\(escape(id))\"><sup>\(escape(id))</sup> \(renderInlines(inlines, ns: ns, env: env))</div>"
 
@@ -340,6 +354,21 @@ public enum MarkdownHTMLRenderer {
 
     /// mlisb: reference links / images, footnote references.
     private static func gfmInlineHTML(_ node: ExtensionInlineNode, ns: NSString, env: Env) -> String {
+        if node.extensionID.hasPrefix(GFMInline.htmlPrefix) {
+            let name = String(node.extensionID.dropFirst(GFMInline.htmlPrefix.count))
+            switch name {
+            case "br": return "<br>"
+            case "img":
+                // Only the vetted attributes are re-emitted, escaped.
+                let tag = GFMHTML.tag(ns, at: node.range.location, end: NSMaxRange(node.range))
+                var out = "<img src=\"\(escape(tag?.attribute("src")?.value ?? ""))\" alt=\"\(escape(tag?.attribute("alt")?.value ?? ""))\""
+                for dim in ["width", "height"] { if let v = tag?.attribute(dim)?.value { out += " \(dim)=\"\(escape(v))\"" } }
+                return out + ">"
+            case "a": return "<a href=\"\(escape(node.target ?? ""))\">\(renderInlines(node.children, ns: ns, env: env, linkable: false))</a>"
+            case "code": return "<code>\(escape(ns.substring(with: node.contentRange)))</code>"
+            default: return "<\(name)>\(renderInlines(node.children, ns: ns, env: env))</\(name)>"
+            }
+        }
         switch node.extensionID {
         case GFMInline.footnoteID:
             let id = escape(ns.substring(with: node.contentRange))

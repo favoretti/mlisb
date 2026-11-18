@@ -327,16 +327,18 @@ enum InlineParser {
             let labelRange: NSRange
             switch span {
             case .link(_, let textRange, _, _): labelRange = textRange
-            case .ext(GFMInline.refID, _, let contentRange, _, _, _): labelRange = contentRange   // mlisb
+            case .ext(let id, _, let contentRange, _, _, _) where id.hasPrefix(GFMInline.idPrefix):   // mlisb
+                labelRange = contentRange
             default: return claimed.overlaps(span.fullRange)
             }
             return claimed.overlapping(span.fullRange).contains { !rangeContains(labelRange, $0) }
         }
         var spans: [Span] = []
+        let index = BracketIndex(ns, len)   // mlisb: one linear pass answers every bracket / paren / tag lookup
         var i = 0
         while i < len {
             if claimed.contains(i) { i += 1; continue }
-            if let span = matchClaimedSpan(ns, len, at: i, registry: registry),
+            if let span = matchClaimedSpan(ns, len, at: i, registry: registry, index: index),
                !hasDisallowedClaimedOverlap(span) {
                 spans.append(span)
                 i = NSMaxRange(span.fullRange)
@@ -347,9 +349,10 @@ enum InlineParser {
         return spans
     }
 
-    private static func matchClaimedSpan(_ ns: NSString, _ len: Int, at i: Int, registry: ExtensionRegistry) -> Span? {
-        if let span = matchBuiltIn(ns, len, at: i) { return span }
-        if let m = GFMInline.match(ns, len, at: i, registry: registry) {  // mlisb
+    private static func matchClaimedSpan(_ ns: NSString, _ len: Int, at i: Int, registry: ExtensionRegistry,
+                                         index: BracketIndex) -> Span? {
+        if let span = matchBuiltIn(ns, len, at: i, index) { return span }
+        if let m = GFMInline.match(ns, len, at: i, registry: registry, index: index) {  // mlisb
             return .ext(id: m.id, range: m.range, contentRange: m.contentRange, markers: m.markers,
                         parsesContent: m.parsesContent, target: m.target)
         }
@@ -395,14 +398,14 @@ enum InlineParser {
     /// The built-in constructs, tried exclusively in fixed precedence order —
     /// the first branch whose trigger matches decides (nil = stays literal
     /// for built-ins), exactly the pre-extension behavior.
-    private static func matchBuiltIn(_ ns: NSString, _ len: Int, at i: Int) -> Span? {
+    private static func matchBuiltIn(_ ns: NSString, _ len: Int, at i: Int, _ ix: BracketIndex) -> Span? {
         let c = ns.character(at: i)
         let c1 = peek(ns, i + 1, len)
         let c2 = peek(ns, i + 2, len)
-        if c == bang, c1 == lbracket, c2 == lbracket { return matchImageEmbed(ns, len, start: i) }
-        if c == lbracket, c1 == lbracket { return matchWikiLink(ns, len, start: i) }
-        if c == bang, c1 == lbracket { return matchImage(ns, len, start: i) }
-        if c == lbracket { return matchLink(ns, len, start: i) }
+        if c == bang, c1 == lbracket, c2 == lbracket { return matchImageEmbed(ns, len, start: i, ix) }
+        if c == lbracket, c1 == lbracket { return matchWikiLink(ns, len, start: i, ix) }
+        if c == bang, c1 == lbracket { return matchImage(ns, len, start: i, ix) }
+        if c == lbracket { return matchLink(ns, len, start: i, ix) }
         if c == dollar, c1 != dollar { return matchInlineLatex(ns, len, start: i) }
         return nil
     }
@@ -454,9 +457,9 @@ enum InlineParser {
     }
 
     /// `![[ target ]]`
-    private static func matchImageEmbed(_ ns: NSString, _ len: Int, start i: Int) -> Span? {
+    private static func matchImageEmbed(_ ns: NSString, _ len: Int, start i: Int, _ ix: BracketIndex) -> Span? {
         let contentStart = i + 3
-        guard let close = closeDoubleBracket(ns, len, from: contentStart) else { return nil }
+        guard let close = closeDoubleBracket(ns, len, from: contentStart, ix) else { return nil }
         return .imageEmbed(
             range: NSRange(location: i, length: (close + 2) - i),
             target: NSRange(location: contentStart, length: close - contentStart),
@@ -465,39 +468,32 @@ enum InlineParser {
     }
 
     /// `[[ name (| id)? ]]`
-    private static func matchWikiLink(_ ns: NSString, _ len: Int, start i: Int) -> Span? {
+    private static func matchWikiLink(_ ns: NSString, _ len: Int, start i: Int, _ ix: BracketIndex) -> Span? {
         let contentStart = i + 2
-        var k = contentStart
+        // mlisb: the first `]` on the line decides, as the loop it replaces did; looked up, not rescanned.
+        guard let k = ix.closeBracket(from: contentStart), peek(ns, k + 1, len) == rbracket else { return nil }
         var pipeIdx = -1
-        while k < len {
-            let ch = ns.character(at: k)
-            if ch == newline { return nil }
-            if ch == pipe, pipeIdx == -1 { pipeIdx = k }
-            if ch == rbracket {
-                guard peek(ns, k + 1, len) == rbracket else { return nil }
-                let range = NSRange(location: i, length: (k + 2) - i)
-                let markers = [NSRange(location: i, length: 2), NSRange(location: k, length: 2)]
-                if pipeIdx >= 0 {
-                    return .wikiLink(range: range,
-                                     name: NSRange(location: contentStart, length: pipeIdx - contentStart),
-                                     id: NSRange(location: pipeIdx + 1, length: k - (pipeIdx + 1)),
-                                     markers: markers)
-                }
-                return .wikiLink(range: range,
-                                 name: NSRange(location: contentStart, length: k - contentStart),
-                                 id: nil, markers: markers)
-            }
-            k += 1
+        var p = contentStart
+        while p < k { if ns.character(at: p) == pipe { pipeIdx = p; break }; p += 1 }
+        let range = NSRange(location: i, length: (k + 2) - i)
+        let markers = [NSRange(location: i, length: 2), NSRange(location: k, length: 2)]
+        if pipeIdx >= 0 {
+            return .wikiLink(range: range,
+                             name: NSRange(location: contentStart, length: pipeIdx - contentStart),
+                             id: NSRange(location: pipeIdx + 1, length: k - (pipeIdx + 1)),
+                             markers: markers)
         }
-        return nil
+        return .wikiLink(range: range,
+                         name: NSRange(location: contentStart, length: k - contentStart),
+                         id: nil, markers: markers)
     }
 
     /// `![ alt ]( url )`
-    private static func matchImage(_ ns: NSString, _ len: Int, start i: Int) -> Span? {
+    private static func matchImage(_ ns: NSString, _ len: Int, start i: Int, _ ix: BracketIndex) -> Span? {
         let altStart = i + 2
-        guard let closeBracket = findChar(ns, len, from: altStart, char: rbracket),
+        guard let closeBracket = ix.closeBracket(from: altStart),   // mlisb: looked up, not rescanned
               peek(ns, closeBracket + 1, len) == lparen,
-              let closeParen = balancedParen(ns, len, from: closeBracket + 2) else { return nil }
+              let closeParen = ix.matchingParen(of: closeBracket + 1) else { return nil }
         let urlStart = closeBracket + 2
         guard closeParen > urlStart else { return nil }
         return .image(
@@ -514,12 +510,12 @@ enum InlineParser {
     }
 
     /// `[ text ]( url )`
-    private static func matchLink(_ ns: NSString, _ len: Int, start i: Int) -> Span? {
+    private static func matchLink(_ ns: NSString, _ len: Int, start i: Int, _ ix: BracketIndex) -> Span? {
         let textStart = i + 1
-        guard let closeBracket = findChar(ns, len, from: textStart, char: rbracket),
+        guard let closeBracket = ix.closeBracket(from: textStart),   // mlisb: looked up, not rescanned
               closeBracket > textStart,
               peek(ns, closeBracket + 1, len) == lparen,
-              let closeParen = balancedParen(ns, len, from: closeBracket + 2) else { return nil }
+              let closeParen = ix.matchingParen(of: closeBracket + 1) else { return nil }
         let urlStart = closeBracket + 2
         guard closeParen > urlStart else { return nil }
         return .link(
@@ -558,15 +554,10 @@ enum InlineParser {
         return nil
     }
 
-    private static func closeDoubleBracket(_ ns: NSString, _ len: Int, from: Int) -> Int? {
-        var k = from
-        while k < len {
-            let ch = ns.character(at: k)
-            if ch == newline { return nil }
-            if ch == rbracket { return peek(ns, k + 1, len) == rbracket ? k : nil }
-            k += 1
-        }
-        return nil
+    private static func closeDoubleBracket(_ ns: NSString, _ len: Int, from: Int, _ ix: BracketIndex) -> Int? {
+        // mlisb: the first `]` on the line, from the index instead of a rescan per `[[`.
+        guard let k = ix.closeBracket(from: from) else { return nil }
+        return peek(ns, k + 1, len) == rbracket ? k : nil
     }
 
     private static func findChar(_ ns: NSString, _ len: Int, from: Int, char: unichar) -> Int? {

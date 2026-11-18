@@ -37,6 +37,8 @@ extension NSAttributedString.Key {
     static let gfmLinkTarget = NSAttributedString.Key("GFMLinkTarget")
     /// mlisb: String — id of a footnote reference; a click moves the caret to its definition.
     static let gfmFootnoteID = NSAttributedString.Key("GFMFootnoteID")
+    /// mlisb: Bool — the last character of an HTML `<br>`; the styler facade widens it to a full line.
+    static let gfmHTMLBreak = NSAttributedString.Key("GFMHTMLBreak")
     /// Marks a bullet-list marker char (`-`/`*`/`+`) whose glyph is hidden so
     /// the fragment can paint a `•` in its place. Set to `true`.
     static let bulletMarker = NSAttributedString.Key("BulletListMarker")

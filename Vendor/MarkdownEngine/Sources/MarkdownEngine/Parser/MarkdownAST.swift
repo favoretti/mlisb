@@ -49,6 +49,7 @@ indirect enum BlockNode: Equatable {
     case frontMatter(range: NSRange)   // mlisb
     case linkDefinition(range: NSRange)   // mlisb
     case footnoteDefinition(range: NSRange, marker: NSRange, inlines: [InlineNode])   // mlisb
+    case html(range: NSRange, kind: GFMHTML.BlockKind, markers: [NSRange], inlines: [InlineNode])   // mlisb
     case ext(ExtensionBlockNode)
 
     var range: NSRange {
@@ -56,7 +57,7 @@ indirect enum BlockNode: Equatable {
         case .paragraph(let r, _), .heading(_, let r, _, _), .blockquote(let r, _),
              .list(let r, _), .codeBlock(let r), .blockLatex(let r), .table(let r),
              .thematicBreak(let r), .blank(let r), .frontMatter(let r),
-             .linkDefinition(let r), .footnoteDefinition(let r, _, _):
+             .linkDefinition(let r), .footnoteDefinition(let r, _, _), .html(let r, _, _, _):
             return r
         case .ext(let node):
             return node.range
@@ -201,6 +202,8 @@ enum DocumentAST {
             return .linkDefinition(range: block.range)
         case .footnoteDefinition:
             return footnoteDefinition(block.range, ns, scoped: scoped, registry: registry)
+        case .htmlBlock:
+            return htmlBlock(block.range, ns, scoped: scoped, registry: registry)
         case .ext(let id):
             return extensionBlock(id: id, range: block.range, ns, scoped: scoped, registry: registry)
         }
@@ -242,6 +245,24 @@ enum DocumentAST {
             inlines: scoped && contentRange.length > 0
                 ? InlineParser.parse(ns, range: contentRange, registry: registry) : []
         ))
+    }
+
+    /// mlisb: a safe-subset HTML block, re-derived from its own lines (the parser found its extent).
+    private static func htmlBlock(_ range: NSRange, _ ns: NSString, scoped: Bool, registry: ExtensionRegistry) -> BlockNode {
+        var lines: [NSRange] = []
+        var cursor = range.location
+        while cursor < NSMaxRange(range) {
+            let line = NSIntersectionRange(ns.lineRange(for: NSRange(location: cursor, length: 0)), range)
+            guard line.length > 0 else { break }
+            lines.append(line)
+            cursor = NSMaxRange(line)
+        }
+        guard !lines.isEmpty, let block = GFMHTML.block(in: ns, lines: lines, first: 0) else {
+            return .paragraph(range: range, inlines: scoped ? InlineParser.parse(ns, range: range, registry: registry) : [])
+        }
+        return .html(range: range, kind: block.kind, markers: block.markers,
+                     inlines: scoped && block.content.length > 0 && block.kind != .comment
+                        ? InlineParser.parse(ns, range: block.content, registry: registry) : [])
     }
 
     /// mlisb: `[^id]: text` — the marker is `[^id]:`, the inlines are the text after it.
