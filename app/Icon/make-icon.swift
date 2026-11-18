@@ -9,44 +9,31 @@ extension Color {
     }
 }
 
-/// "M↓" with the M drawn as a small node-and-edge diagram: markdown plus diagrams.
-struct Glyph: View {
-    let ink = Color(0x1E1B2E)
-    let accent = Color(0xE4572E)
-    // Vertices of the M inside the 824pt tile.
-    let m: [CGPoint] = [.init(x: 170, y: 548), .init(x: 170, y: 276), .init(x: 305, y: 426), .init(x: 440, y: 276), .init(x: 440, y: 548)]
-
-    var body: some View {
-        ZStack {
-            Path { $0.addLines(m) }
-                .stroke(ink, style: StrokeStyle(lineWidth: 34, lineCap: .round, lineJoin: .round))
-            ForEach(m.indices, id: \.self) { i in
-                Circle().fill(ink).frame(width: 84, height: 84).position(m[i])
-            }
-            // Down arrow: shaft and head.
-            Path { p in
-                p.move(to: .init(x: 632, y: 276))
-                p.addLine(to: .init(x: 632, y: 470))
-            }
-            .stroke(accent, style: StrokeStyle(lineWidth: 54, lineCap: .round))
-            Path { p in
-                p.move(to: .init(x: 556, y: 446))
-                p.addLine(to: .init(x: 632, y: 548))
-                p.addLine(to: .init(x: 708, y: 446))
-            }
-            .stroke(accent, style: StrokeStyle(lineWidth: 54, lineCap: .round, lineJoin: .round))
-        }
-    }
-}
-
+/// Raw markdown on the left, the same thing as it should look on the right.
 struct Icon: View {
+    let ink = Color(0x1E1B2E)
+
     var body: some View {
         let tile = RoundedRectangle(cornerRadius: 186, style: .continuous)
         ZStack {
             tile.fill(LinearGradient(colors: [Color(0xFDFAF3), Color(0xE9E0CF)], startPoint: .top, endPoint: .bottom))
                 .shadow(color: .black.opacity(0.28), radius: 16, y: 10)
+            ZStack {
+                HStack(spacing: 0) { Rectangle().fill(ink); Color.clear }
+                Text("#")
+                    .font(.system(size: 340, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(0xB9B4D0))
+                    .position(x: 206, y: 400)
+                VStack(alignment: .leading, spacing: 38) {
+                    RoundedRectangle(cornerRadius: 20).fill(ink).frame(width: 250, height: 74)
+                    ForEach([290, 290, 190], id: \.self) { width in
+                        RoundedRectangle(cornerRadius: 12).fill(ink.opacity(0.45)).frame(width: CGFloat(width), height: 30)
+                    }
+                }
+                .position(x: 618, y: 412)
+            }
+            .clipShape(tile)
             tile.strokeBorder(LinearGradient(colors: [.white.opacity(0.9), .black.opacity(0.08)], startPoint: .top, endPoint: .bottom), lineWidth: 4)
-            Glyph().offset(x: -20).scaleEffect(1.1)
         }
         .frame(width: 824, height: 824)
         .frame(width: 1024, height: 1024)
