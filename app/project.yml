@@ -26,6 +26,7 @@ targets:
     sources:
       - Sources
       - Assets.xcassets
+      - Credits.html
       - path: ../bin/mlisb
         buildPhase:
           copyFiles:

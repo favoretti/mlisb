@@ -161,9 +161,12 @@ and current status are in [PLAN.md](PLAN.md).
 
 ## Licenses
 
-mlisb is released under the MIT license, see [LICENSE](LICENSE). The parts it builds on keep their own:
+mlisb is released under the MIT license, see [LICENSE](LICENSE). The parts it builds on keep their own.
+The full texts are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), and the app shows them in its
+About window.
+
 
 - MarkdownEngine (vendored, modified): Apache-2.0, see `Vendor/MarkdownEngine/LICENSE`.
 - mermaid, SwiftMath, Sparkle: MIT.
-- D2: MPL-2.0.
+- D2: MPL-2.0. ELK (bundled by mermaid): EPL-2.0.
 - highlight.js: BSD-3-Clause, bundled by the engine's code-block product.

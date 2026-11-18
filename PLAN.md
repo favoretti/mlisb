@@ -101,7 +101,8 @@ RenderService: one hidden WKWebView for the whole app, never visible
 - **No running external programs**: D2 runs as WASM (it could later be linked as a Go
   c-archive), never the `d2` CLI.
 - **Licenses**: MarkdownEngine and swift-markdown are Apache-2.0, mermaid / highlight.js /
-  MathJax are MIT/BSD/Apache, D2 is MPL-2.0. Ship an Acknowledgements screen.
+  MathJax are MIT/BSD/Apache, D2 is MPL-2.0. The About window lists them all: `THIRD-PARTY-NOTICES.md`
+  plus the license of every JavaScript package the build bundled.
 - **Distribution**: needs an Apple Developer Program membership under favoretti.
 
 ## Status (2026-11-18)

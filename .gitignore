@@ -7,6 +7,7 @@ DerivedData/
 xcuserdata/
 app/Info.plist
 app/mlisb.entitlements
+app/Credits.html
 Kit/Sources/MlisbKit/Resources/render/
 notes/
 .claude/worktrees/
