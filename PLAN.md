@@ -55,15 +55,19 @@ RenderService: one hidden WKWebView for the whole app, never visible
 - **Engine fork.** The upstream engine had no hook for fenced blocks, opened relative links as
   `https://…`, rewrote `->` to `→` while typing, and moved the caret to the end on reload. We
   vendor it and keep the changes small and listed in `Vendor/MarkdownEngine/PATCHES.md`.
-- **Gaps against GFM** (the upstream parser covers a subset; these show as plain text, the file
-  is never altered). Roughly by how often they appear in developer docs:
-  1. Fenced code that is indented or nested in a list item, and `~~~` fences.
-  2. Raw HTML (`<details>`, `<img>`, `<br>`, `<kbd>`, comments).
-  3. Alerts (`> [!NOTE]`, `> [!WARNING]`…).
-  4. Reference-style links and footnotes.
-  5. Setext headings, front matter, tables without outer pipes, indented code blocks.
-  Already GitHub-like: fenced code with language highlighting in GitHub's light/dark colours,
-  tables, task lists, strikethrough, bare-URL autolinks, mermaid.
+- **GitHub-flavored coverage.** Rendered like github.com: fenced code in every valid form
+  (backticks or tildes, indented, inside lists and quotes) with highlighting, tables with or
+  without outer pipes, task lists, strikethrough, autolinks, alerts, setext headings, front
+  matter, reference-style links, footnotes, math, mermaid, and a safe subset of raw HTML
+  (`kbd`, `sub`, `sup`, `mark`, `details`, `img`, comments and similar). The file is never altered.
+- **Known differences from github.com:**
+  - An opening fence with no closing fence stays ordinary text, so typing a fence does not
+    turn the rest of the document into code.
+  - `<br>` outside tables shows as a dimmed tag; `<details>` is always expanded.
+  - A reference-style image (`![alt][label]`) is shown as a link, not drawn.
+  - Footnote definitions do not span continuation lines; a code block inside a list item is
+    drawn flush left.
+  - Indented (four-space) code blocks and any HTML outside the safe subset show as plain text.
 - **Diagrams**: when the cursor enters a block it shows source; leaving it renders. A failed
   render shows the renderer's error message in place of the diagram.
 - **Saving**: automatic, 1 s after you stop typing and when the app loses focus. Written in
@@ -117,7 +121,7 @@ Not done or not verified:
 - The updater has never installed a real update; signing with a Developer ID, notarization and
   the release workflow have not been run.
 - Remote images, a formatting bar over the selection, underline, image drop into `./assets/`.
-- See "Gaps against GFM" above for rendering differences still open.
+- See "Known differences from github.com" above.
 
 ## Milestones
 0. **Spike (go/no-go on the engine)**: put MarkdownEngine in a bare app and open real

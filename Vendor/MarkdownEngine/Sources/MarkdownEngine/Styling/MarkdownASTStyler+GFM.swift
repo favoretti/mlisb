@@ -71,8 +71,8 @@ extension MarkdownASTStyler {
         var content: [NSAttributedString.Key: Any] = [:]
         switch name {
         case "br":
-            // The last tag character is widened to a full line by the facade (`.gfmHTMLBreak`), so the text after it wraps.
-            attrs.append((NSRange(location: NSMaxRange(node.range) - 1, length: 1), [.gfmHTMLBreak: true]))
+            // Shown dimmed, not faked as a break: a line cannot end without a newline in the text.
+            attrs.append((node.range, [.font: font, .foregroundColor: muted, .kern: 0]))
             return
         case "img":
             attrs.append((node.range, [.foregroundColor: muted]))   // overridden when the image is drawn

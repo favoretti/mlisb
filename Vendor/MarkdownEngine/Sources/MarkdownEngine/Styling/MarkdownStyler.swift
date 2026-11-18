@@ -231,12 +231,6 @@ enum MarkdownStyler {
             scopedRanges: scopedRanges, precomputedBlocks: precomputedBlocks,
             configuration: configuration
         )
-        // mlisb: `<br>` ends its line by widening its last character to the container (the text after it wraps).
-        let breaks = result.filter { $0.attributes[.gfmHTMLBreak] != nil }
-        if !breaks.isEmpty {
-            let width = effectiveContainerWidth(for: ctx)
-            result += breaks.map { ($0.range, [.kern: width]) }
-        }
         let astMs = Double(DispatchTime.now().uptimeNanoseconds - astT0) / 1_000_000
         // NSImage rendering reuses the existing, proven machinery.
         let imgT0 = DispatchTime.now().uptimeNanoseconds

@@ -1093,7 +1093,8 @@ enum MarkdownASTStyler {
                 shrinkInlineMarkers(children, ctx: ctx, forceReveal: active, into: &attrs)
             case .ext(let node):
                 let active = forceReveal || ctx.isActive(node.range)
-                if !active { shrink(node.markers, ctx: ctx, into: &attrs) }
+                // mlisb: `<br>` has no rendered form in the editor, so its tag is never hidden.
+                if !active, node.extensionID != GFMInline.htmlPrefix + "br" { shrink(node.markers, ctx: ctx, into: &attrs) }
                 shrinkInlineMarkers(node.children, ctx: ctx, forceReveal: active, into: &attrs)
             case .link(let range, _, _, let markers, let children):
                 let active = forceReveal || ctx.isActive(range)

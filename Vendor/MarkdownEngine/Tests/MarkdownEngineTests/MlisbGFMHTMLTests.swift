@@ -90,14 +90,12 @@ struct MlisbGFMHTMLTests {
         #expect(GFM.bold(at: ("<kbd>**x**</kbd>\n" as NSString).range(of: "x").location, in: GFM.attrs("<kbd>**x**</kbd>\n")))
     }
 
-    @Test("<br> breaks the line: its last character is flagged and widened by the facade")
+    @Test("<br> stays visible and dimmed in the editor, and is a real break in the export")
     func lineBreak() {
         let text = "one<br>two\n"
         let a = GFM.attrs(text)
-        #expect(GFM.value(.gfmHTMLBreak, at: 6, in: a) as? Bool == true)
-        #expect(GFM.fontSize(at: 3, in: a) < 2)
-        let full = GFM.fullAttrs(text)
-        #expect((GFM.value(.kern, at: 6, in: full) as? CGFloat ?? 0) > 100)
+        #expect(GFM.fontSize(at: 3, in: a) > 8)
+        #expect((GFM.value(.kern, at: 6, in: GFM.fullAttrs(text)) as? CGFloat ?? 0) == 0)
         #expect(export(text) == "<p>one<br>two</p>")
     }
 
