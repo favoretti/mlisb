@@ -34,6 +34,8 @@ targets:
       - package: MarkdownEngine
         product: MarkdownEngineCodeBlocks
       - package: MlisbKit
+      - target: mlisbQuickLook
+      - target: mlisbThumbnail
     scheme:
       testTargets: [mlisbTests]
     info:
@@ -68,12 +70,77 @@ targets:
   mlisbTests:
     type: bundle.unit-test
     platform: macOS
-    sources: [Tests]
+    # The extension logic is compiled in directly so it can be unit-tested.
+    sources:
+      - Tests
+      - QuickLook/PreviewContent.swift
+      - QuickLook/PreviewViewController.swift
+      - Thumbnail/ThumbnailText.swift
+      - Thumbnail/ThumbnailProvider.swift
     dependencies:
       - target: mlisb
+      - package: MarkdownEngine
+        product: MarkdownEngine
+      - package: MarkdownEngine
+        product: MarkdownEngineCodeBlocks
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: $(MLISB_BUNDLE_ID).tests
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/mlisb.app/Contents/MacOS/mlisb
         BUNDLE_LOADER: $(TEST_HOST)
+  mlisbQuickLook:
+    type: app-extension
+    platform: macOS
+    sources: [QuickLook]
+    dependencies:
+      - package: MarkdownEngine
+        product: MarkdownEngine
+      - package: MarkdownEngine
+        product: MarkdownEngineCodeBlocks
+    info:
+      path: QuickLook/Info.plist
+      properties:
+        CFBundleDisplayName: mlisb Preview
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.quicklook.preview
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PreviewViewController
+          NSExtensionAttributes:
+            QLSupportedContentTypes: [net.daringfireball.markdown]
+            QLIsDataBasedPreview: false
+    entitlements:
+      path: QuickLook/QuickLook.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-only: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(MLISB_BUNDLE_ID).quicklook
+        ENABLE_HARDENED_RUNTIME: YES
+  mlisbThumbnail:
+    type: app-extension
+    platform: macOS
+    sources: [Thumbnail]
+    info:
+      path: Thumbnail/Info.plist
+      properties:
+        CFBundleDisplayName: mlisb Thumbnail
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.quicklook.thumbnail
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ThumbnailProvider
+          NSExtensionAttributes:
+            QLSupportedContentTypes: [net.daringfireball.markdown]
+            QLThumbnailMinimumDimension: 0
+    entitlements:
+      path: Thumbnail/Thumbnail.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-only: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(MLISB_BUNDLE_ID).thumbnail
+        ENABLE_HARDENED_RUNTIME: YES
