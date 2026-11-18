@@ -7,12 +7,17 @@ struct SettingsView: View {
     @AppStorage("textSize") private var textSize = ReadingSettings.defaultSize
     @AppStorage("lineWidth") private var lineWidth = LineWidth.medium
     @State private var reopensWindows = Session.reopensWindows
+    @AppStorage("openIn") private var openIn = OpenIn.tab
 
     var body: some View {
         Form {
             Section("General") {
                 Toggle("Reopen windows from last time", isOn: $reopensWindows)
                     .onChange(of: reopensWindows) { Session.reopensWindows = reopensWindows }
+                Picker("Open files in", selection: $openIn) {
+                    ForEach(OpenIn.allCases) { Text($0.label).tag($0) }
+                }
+                .onChange(of: openIn) { OpenIn.apply() }
             }
             Section("Reading") {
                 LabeledContent("Text size") {

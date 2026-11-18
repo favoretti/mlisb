@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 
 /// Whether Markdown files open with mlisb, and making it so.
@@ -49,4 +50,38 @@ enum Session {
 
     /// AppKit reads this key, from the app's own settings first, when it decides whether to keep the windows.
     static func apply() { UserDefaults.standard.set(reopensWindows, forKey: "NSQuitAlwaysKeepsWindows") }
+}
+
+/// Where a file goes when it is opened while a window is already showing.
+enum OpenIn: String, CaseIterable, Identifiable {
+    case tab, window
+
+    var id: Self { self }
+    var label: String { self == .tab ? "A new tab" : "A new window" }
+
+    static var current: OpenIn { UserDefaults.standard.string(forKey: "openIn").flatMap(OpenIn.init) ?? .tab }
+
+    /// The app's own copy of the system's "Prefer tabs when opening documents"; AppKit looks here first,
+    /// but only once per launch. "manual" still lets windows be merged into tabs by hand.
+    static func apply() {
+        UserDefaults.standard.set(current == .tab ? "always" : "manual", forKey: "AppleWindowTabbingMode")
+    }
+
+    /// For one window, so a change made in Settings holds before the next launch too.
+    var tabbingMode: NSWindow.TabbingMode {
+        self == .tab ? .preferred : NSWindow.userTabbingPreference == .always ? .disallowed : .automatic
+    }
+}
+
+/// Applies the tab-or-window choice to the window it sits in.
+struct WindowTabbing: NSViewRepresentable {
+    let openIn: OpenIn
+
+    func makeNSView(context: Context) -> Probe { Probe() }
+    func updateNSView(_ view: Probe, context: Context) { view.openIn = openIn }
+
+    final class Probe: NSView {
+        var openIn = OpenIn.current { didSet { window?.tabbingMode = openIn.tabbingMode } }
+        override func viewDidMoveToWindow() { window?.tabbingMode = openIn.tabbingMode }
+    }
 }

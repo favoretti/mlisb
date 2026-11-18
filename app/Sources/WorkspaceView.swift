@@ -6,6 +6,7 @@ struct WorkspaceView: View {
     @State private var folder: FolderModel?
     @State private var nav = NavState()
     @Environment(\.openWindow) private var openWindow
+    @AppStorage("openIn") private var openIn = OpenIn.tab
 
     var body: some View {
         Group {
@@ -25,6 +26,7 @@ struct WorkspaceView: View {
             }
         }
         .navigationTitle(root?.lastPathComponent ?? "mlisb")
+        .background(WindowTabbing(openIn: openIn))
         // Files opened from Finder or the CLI go to the window already showing them
         // (or their folder); an empty window takes anything.
         .handlesExternalEvents(
