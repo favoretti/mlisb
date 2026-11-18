@@ -129,6 +129,32 @@ struct MlisbGFMPerformanceTests {
         }
     }
 
+    // MARK: Typing
+
+    @Test("typing in the middle of a large mixed document stays incremental")
+    func typingStaysIncremental() {
+        let section = "# Title\n\nA paragraph with **bold**, `code`, [a][r] and <kbd>k</kbd>.\n\n- item\n- item\n\n"
+            + "~~~js\nlet x = 1\n~~~\n\n> [!NOTE]\n> quote\n\na | b\n---|---\n1 | 2\n\n[r]: /x\n\n"
+        let doc = rep(section, 1_500)   // ~28k lines
+        let state = DocumentParseState()
+        _ = state.tokens(for: doc, edit: nil)
+        var text = doc as NSString
+        var loc = text.length / 2
+        // Warm the edit path once, then time 100 keystrokes (a digit in the middle of a paragraph each time).
+        func type(_ ch: String) {
+            text = text.replacingCharacters(in: NSRange(location: loc, length: 0), with: ch) as NSString
+            _ = state.tokens(for: text as String, edit: ParseEditDescriptor(editedRange: NSRange(location: loc, length: ch.utf16.count), delta: ch.utf16.count))
+            loc += ch.utf16.count
+        }
+        // Land inside a paragraph line.
+        loc = text.range(of: "A paragraph", options: [], range: NSRange(location: loc, length: text.length - loc)).location + 4
+        type("x")
+        let seconds = timed("100 keystrokes in a 28k-line document", limit: 3.0) {
+            for _ in 0..<100 { type("y") }
+        }
+        print("PERF per keystroke: \(String(format: "%.1f", seconds * 10)) ms")
+    }
+
     // MARK: Tokens, AST and styling on a few heavy documents
 
     @Test("styling hostile documents stays linear")
