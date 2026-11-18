@@ -117,11 +117,13 @@ Working:
 - System: Quick Look preview, `mlisb` CLI (open at a line, the agent hook), settings for text
   size and line width, a Setup section (default app, command line tool, agent hook), built-in
   help, New Document, built-in updater, release script and workflow.
+- Released: versions 0.1.0 to 0.1.5 were signed, notarized and published by the release workflow,
+  and the updater has installed real updates. `CHANGELOG.md` lists what each version changed.
+- Windows: tabs or separate windows, tabs across the top or down the left side, and the previous
+  session's windows reopened at launch.
 
 Not done or not verified:
 - Finder thumbnails are built but the system did not pick them up in a development build.
-- The updater has never installed a real update; that needs a second release. Version 0.1.0 was
-  signed, notarized and published by the release workflow.
 - Remote images, a formatting bar over the selection, underline, image drop into `./assets/`.
 - See "Known differences from github.com" above.
 

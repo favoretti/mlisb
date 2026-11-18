@@ -76,6 +76,10 @@ VERSION=0.1.0 scripts/build-app.sh
 Set `SIGN_IDENTITY` to a Developer ID identity to sign for distribution, and `NOTARY_PROFILE` to a
 `notarytool` keychain profile to notarize and staple.
 
+Before tagging, move what is under **Unreleased** in `CHANGELOG.md` into a section for the new
+version, `## [X.Y.Z] - YYYY-MM-DD`. The release run stops at its first step if that section is
+missing, and its text becomes the release notes (`scripts/release-notes.sh X.Y.Z` prints it).
+
 Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: it builds, signs and notarizes, runs
 the tests, generates the update feed (`appcast.xml`), publishes a GitHub release and updates the
 Homebrew cask. The workflow needs these repository secrets: `DEVELOPER_ID_P12`,
@@ -85,6 +89,19 @@ Homebrew cask. The workflow needs these repository secrets: `DEVELOPER_ID_P12`,
 The app looks for updates at this repository's latest release, so releases must be publicly
 downloadable for updates to work.
 
+## Keeping the documents in step
+
+A change a user can see is not finished until these say the same thing as the app, in the same
+commit:
+
+- `CHANGELOG.md`: a line under **Unreleased**.
+- `README.md`: the feature text, the Settings table and the shortcut table.
+- `app/Help/mlisb Help.md`: the guide shipped inside the app.
+
+The Settings table and the shortcut table list every setting and every shortcut the app has; check
+them against `app/Sources` (`keyboardShortcut`, and the sections in `SettingsView.swift`) rather
+than from memory.
+
 ## Repository layout
 
 - `app/`: SwiftUI app (XcodeGen `project.yml`, `Sources/`, `Tests/`).
@@ -93,4 +110,6 @@ downloadable for updates to work.
 - `Vendor/MarkdownEngine/`: our fork of nodes-app/swift-markdown-engine 0.16.0. Changes are listed in its `PATCHES.md`.
 - `bin/mlisb`: the command-line script.
 - `docs/`: this page and the screenshots the README shows.
+- `CHANGELOG.md`: what changed in each version.
+- `scripts/`: the release build and the release-notes extractor.
 - `PLAN.md`: the plan and status.

@@ -19,6 +19,8 @@ Mermaid and D2 diagrams, math and highlighted code render in place.
 <a href="#see-what-your-agent-changed">Change review</a> ·
 <a href="#jump-anywhere">Navigation</a> ·
 <a href="#from-the-terminal">Terminal</a> ·
+<a href="#settings">Settings</a> ·
+<a href="CHANGELOG.md">Changelog</a> ·
 <a href="docs/DEVELOPMENT.md">Build from source</a>
 </p>
 
@@ -47,7 +49,8 @@ brew install --cask favoretti/tap/mlisb
 
 Or download the latest `mlisb-x.y.z.zip` from the
 [releases page](https://github.com/favoretti/mlisb/releases), unzip it and move `mlisb.app` to
-Applications. The app keeps itself up to date after that.
+Applications. The app keeps itself up to date after that. What changed in each version is in the
+[changelog](CHANGELOG.md).
 
 ## Diagrams, math and code, in place
 
@@ -100,11 +103,14 @@ mlisb hook install       # open every Markdown file Claude Code writes
 ```
 
 The Homebrew cask installs the `mlisb` command. Otherwise choose **mlisb → Install Command Line
-Tool…** and run the one line it shows. `mlisb hook install` adds one hook to
+Tool…** and run the one line it shows; Settings → Setup shows whether the command is installed.
+`mlisb hook install` adds one hook to
 `~/.claude/settings.json` and keeps a backup of the old file; `mlisb hook uninstall` removes it.
 
 ## Also in the box
 
+- **New documents.** File → New Document (⌘N) asks where to save, then opens the empty file ready to
+  type. Every document is a real file from the start.
 - **Folder sidebar.** New file or folder, rename, drag to move, Move to Trash, Reveal in Finder, and
   a Quick Look preview for images and PDFs.
 - **GitHub Flavored Markdown.** Tables, task lists, alerts, footnotes, front matter, reference
@@ -112,17 +118,31 @@ Tool…** and run the one line it shows. `mlisb hook install` adds one hook to
 - **Wide tables** spread into the free space beside the text before they wrap tightly or scroll.
 - **Saves by itself**, one second after you stop typing, in place.
 - **Tabs your way.** A newly opened file becomes a tab or its own window, and the tabs sit across the
-  top or in a list down the left side. Both are settings.
+  top or in a list down the left side.
 - **Comes back as you left it.** The windows you had open reopen at launch, including after an
-  update. A switch in Settings turns this off.
+  update.
 - **Export** to HTML, PDF, JPEG and ePub. **Copy as** plain text, rich text, Markdown or HTML.
 - **Quick Look.** Press Space on a Markdown file in Finder for a rendered preview.
 - **Careful with links.** A link to another Markdown file opens in the app. Anything that would
   leave the app asks first.
-- **Settings** for text size and line width, and a **Setup** section that makes mlisb the default app
-  for Markdown files and shows where the `mlisb` command is installed.
-- **Help** opens a built-in guide, itself a Markdown document with live diagrams.
+- **Help → mlisb Help** opens a built-in guide, itself a Markdown document with live diagrams.
 - **File types:** `md`, `markdown`, `mdown`, `mkd`, `mdx`, `qmd`, `rmd`, `mdc`.
+
+## Settings
+
+**mlisb → Settings** (⌘,) has four groups:
+
+| Group | Setting | What it does |
+| --- | --- | --- |
+| General | Reopen windows from last time | Brings back the windows that were open. On by default. |
+| General | Open files in | A file opened while a window is showing becomes a new tab (the default) or a new window. |
+| General | Show tabs | Across the top (the default) or as a list down the left side. |
+| Reading | Text size | 12 to 24 points. |
+| Reading | Line width | Narrow, Medium (the default), Wide, or Full width to use the whole window. |
+| Setup | Default app for Markdown files | Make Default opens every Markdown file with mlisb. |
+| Setup | Command line tool | Shows where `mlisb` is installed, or how to install it. |
+| Setup | Claude Code | Copies the `mlisb hook install` command. |
+| Updates | Automatic checks and installs | Check for updates by itself, and optionally install them; Check Now looks immediately. |
 
 ## Keyboard shortcuts
 
@@ -161,15 +181,15 @@ GitHub is the reference for how a document should look. These are the known diff
 
 ## Development
 
-Building, testing and releasing are described in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The plan
-and current status are in [PLAN.md](PLAN.md).
+Building, testing and releasing are described in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). What
+changed in each version is in [CHANGELOG.md](CHANGELOG.md). The plan and current status are in
+[PLAN.md](PLAN.md).
 
 ## Licenses
 
 mlisb is released under the MIT license, see [LICENSE](LICENSE). The parts it builds on keep their own.
 The full texts are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), and the app shows them in its
 About window.
-
 
 - MarkdownEngine (vendored, modified): Apache-2.0, see `Vendor/MarkdownEngine/LICENSE`.
 - mermaid, SwiftMath, Sparkle: MIT.
