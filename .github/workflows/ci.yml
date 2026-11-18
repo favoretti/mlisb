@@ -1,0 +1,25 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          brew install xcodegen
+          corepack enable
+
+      - name: Build (ad-hoc signed)
+        run: scripts/build-app.sh
+
+      - name: Test
+        run: |
+          (cd Kit && swift test)
+          xcodebuild -project app/mlisb.xcodeproj -scheme mlisb -derivedDataPath app/.build/xcode \
+            -destination 'platform=macOS' test
