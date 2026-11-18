@@ -48,7 +48,9 @@ import Observation
         reload()
     }
 
-    var isReadOnly: Bool { error != nil }
+    var isReadOnly: Bool { error != nil || isBundled }
+    /// The built-in help: shown, never edited or tracked.
+    private var isBundled: Bool { FS.under(url, Bundle.main.bundleURL) }
     /// The sandbox has no access to this file (e.g. a link target outside what was opened).
     private(set) var needsAccess = false
 
@@ -59,8 +61,8 @@ import Observation
             needsAccess = false
             diskText = loaded
             setFromDisk(loaded)
-            try? history.record(loaded, for: url, origin: .opened)
-            var baseline = history.reviewedBaseline(for: url)
+            if !isBundled { try? history.record(loaded, for: url, origin: .opened) }
+            var baseline = isBundled ? loaded : history.reviewedBaseline(for: url)
             if baseline == nil {
                 baseline = loaded
                 try? history.setReviewedBaseline(loaded, for: url)

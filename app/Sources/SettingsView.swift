@@ -19,6 +19,7 @@ struct SettingsView: View {
                     ForEach(LineWidth.allCases) { Text($0.label).tag($0) }
                 }
             }
+            SetupSettings()
 #if canImport(Sparkle)
             UpdatesSettings(updater: updater)
 #endif
@@ -26,6 +27,58 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 460)
         .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct SetupSettings: View {
+    @State private var isDefault = DefaultApp.isDefault
+    @State private var tool = CommandLineTool.installedPath
+    @State private var failed = false
+
+    var body: some View {
+        Section("Setup") {
+            LabeledContent("Default app for Markdown files") {
+                if isDefault {
+                    Label("mlisb", systemImage: "checkmark.circle.fill").foregroundStyle(.secondary)
+                } else {
+                    Button("Make Default") {
+                        Task {
+                            do { try await DefaultApp.makeDefault() } catch { failed = true }
+                            isDefault = DefaultApp.isDefault
+                        }
+                    }
+                }
+            }
+            // Both can change outside the app (Finder, Terminal), so look again when we come back.
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                isDefault = DefaultApp.isDefault
+                tool = CommandLineTool.installedPath
+            }
+            .alert("mlisb could not make itself the default", isPresented: $failed) {
+                Button("OK") {}
+            } message: {
+                Text("In Finder, select a Markdown file and choose File > Get Info. Under “Open with”, pick mlisb and click Change All.")
+            }
+            LabeledContent {
+                if let tool {
+                    Text(tool).foregroundStyle(.secondary).textSelection(.enabled)
+                } else {
+                    Button("Install…") { showInstallCommandLineTool() }
+                }
+            } label: {
+                Text("Command line tool")
+                Text("Opens files and folders from Terminal, for example “mlisb .”")
+            }
+            LabeledContent {
+                Button("Copy Command") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString("mlisb hook install", forType: .string)
+                }
+            } label: {
+                Text("Claude Code")
+                Text("Run “mlisb hook install” in Terminal, and every Markdown file the agent writes opens here.")
+            }
+        }
     }
 }
 

@@ -17,8 +17,9 @@ struct WorkspaceView: View {
                 ContentUnavailableView {
                     Label("mlisb", systemImage: "doc.richtext")
                 } description: {
-                    Text("Open a Markdown file or a folder.")
+                    Text("Start a new document, or open a Markdown file or a folder.")
                 } actions: {
+                    Button("New Document…") { if let url = createNewDocument() { root = url } }
                     Button("Open…") { root = chooseFilesOrFolders().first }
                 }
             }

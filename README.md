@@ -114,13 +114,16 @@ Tool…** and run the one line it shows. `mlisb hook install` adds one hook to
 - **Quick Look.** Press Space on a Markdown file in Finder for a rendered preview.
 - **Careful with links.** A link to another Markdown file opens in the app. Anything that would
   leave the app asks first.
-- **Settings** for text size and line width.
+- **Settings** for text size and line width, and a **Setup** section that makes mlisb the default app
+  for Markdown files and shows where the `mlisb` command is installed.
+- **Help** opens a built-in guide, itself a Markdown document with live diagrams.
 - **File types:** `md`, `markdown`, `mdown`, `mkd`, `mdx`, `qmd`, `rmd`, `mdc`.
 
 ## Keyboard shortcuts
 
 | Shortcut | Action |
 | --- | --- |
+| ⌘N | New document |
 | ⌘O | Open a file or folder |
 | ⇧⌘O | Open Quickly |
 | ⇧⌘F | Find in Folder |

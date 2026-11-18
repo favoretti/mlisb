@@ -22,6 +22,7 @@ struct MlisbApp: App {
         .defaultSize(width: 1100, height: 800)
         .commands {
             CommandGroup(replacing: .newItem) { OpenCommand() }
+            CommandGroup(replacing: .help) { HelpCommand() }
             CommandGroup(after: .appInfo) {
 #if canImport(Sparkle)
                 CheckForUpdatesCommand(updater: updater)
@@ -57,6 +58,8 @@ private struct OpenCommand: View {
     @FocusedValue(\.workspaceRoot) private var focusedRoot
 
     var body: some View {
+        Button("New Document…") { if let url = createNewDocument() { open([url]) } }
+            .keyboardShortcut("n")
         Button("Open…") { open(chooseFilesOrFolders()) }
             .keyboardShortcut("o")
         Menu("Open Recent") {
@@ -78,6 +81,17 @@ private struct OpenCommand: View {
     }
 }
 
+private struct HelpCommand: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("mlisb Help") {
+            if let url = Bundle.main.url(forResource: "mlisb Help", withExtension: "md") { openWindow(value: url) }
+        }
+        Button("mlisb on GitHub") { NSWorkspace.shared.open(URL(string: "https://github.com/favoretti/mlisb")!) }
+    }
+}
+
 extension FocusedValues {
     @Entry var workspaceRoot: Binding<URL?>?
 }
@@ -91,7 +105,7 @@ extension FocusedValues {
 }
 
 /// A sandboxed app can't write to /usr/local/bin, so the user runs the command.
-@MainActor private func showInstallCommandLineTool() {
+@MainActor func showInstallCommandLineTool() {
     let script = Bundle.main.bundlePath.replacingOccurrences(of: "'", with: "'\\''") + "/Contents/Resources/bin/mlisb"
     let command = "sudo mkdir -p /usr/local/bin && sudo ln -sf '\(script)' /usr/local/bin/mlisb"
     let alert = NSAlert()

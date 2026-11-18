@@ -10,6 +10,7 @@ import Observation
     /// Call when a window gets its root. A restored window has no sandbox access
     /// until the bookmark saved on an earlier open is resolved.
     func begin(_ url: URL) {
+        if FS.under(url, Bundle.main.bundleURL) { return }   // the built-in help needs no access and is not a recent document
         // shortcut: bookmarks are never pruned; cap the dictionary if it grows large.
         var saved = UserDefaults.standard.dictionary(forKey: "bookmarks") as? [String: Data] ?? [:]
         var stale = false

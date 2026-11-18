@@ -115,7 +115,8 @@ Working:
 - Files: autosave, silent reload, conflict banner, links between documents, local images,
   export (HTML, PDF, JPEG, ePub) and copy-as, Open Recent, sandbox bookmarks.
 - System: Quick Look preview, `mlisb` CLI (open at a line, the agent hook), settings for text
-  size and line width, built-in updater, release script and workflow.
+  size and line width, a Setup section (default app, command line tool, agent hook), built-in
+  help, New Document, built-in updater, release script and workflow.
 
 Not done or not verified:
 - Finder thumbnails are built but the system did not pick them up in a development build.
