@@ -169,14 +169,16 @@ enum BlockLevelTokenizer {
         var lineStart = 0
         while lineStart < len {
             let (contentEnd, nextStart) = line(in: s, from: lineStart)
-            if isTableRow(s, lineStart, contentEnd), nextStart < len {
+            // mlisb: same predicates as the block parser (outer pipes optional).
+            func text(_ a: Int, _ b: Int) -> String { s.substring(with: NSRange(location: a, length: b - a)) }
+            if nextStart < len {
                 let (sepEnd, afterSep) = line(in: s, from: nextStart)
-                if isTableSeparator(s, nextStart, sepEnd) {
+                if BlockParser.isTableStart(header: text(lineStart, contentEnd), delimiter: text(nextStart, sepEnd)) {
                     var rowEnd = sepEnd
                     var cursor = afterSep
                     while cursor < len {
                         let (cEnd, cNext) = line(in: s, from: cursor)
-                        guard isTableRow(s, cursor, cEnd) else { break }
+                        guard BlockParser.isTableDataRow(text(cursor, cEnd)) else { break }
                         rowEnd = cEnd
                         if cNext <= cursor { cursor = cEnd; break }
                         cursor = cNext

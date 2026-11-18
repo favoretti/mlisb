@@ -242,15 +242,16 @@ enum BlockParser {
         // A trailing fence/latex/extension block reaching the window end might continue past it.
         if let last = reparsed.last, NSMaxRange(last.range) >= winEndNew {
             switch last.kind {
-            case .fencedCode, .blockLatex, .ext: return nil
+            case .fencedCode, .blockLatex, .ext, .table: return nil   // mlisb: a table takes following rows
             case .paragraph:
                 // The edit may have dissolved the separator that used to end
                 // this paragraph (backspace-joining two paragraphs): if the
                 // suffix ALSO starts with a paragraph, the two would need to
                 // MERGE — a full parse never yields adjacent paragraphs. The
                 // splice can't merge across the cut, so fall back.
-                if winLast + 1 < oldBlocks.count, oldBlocks[winLast + 1].kind == .paragraph
-                    || winLast + 1 < oldBlocks.count && oldBlocks[winLast + 1].kind == .setextHeading {  // mlisb
+                // mlisb: a following setext block or `---` line would also merge with it.
+                if winLast + 1 < oldBlocks.count,
+                   [BlockKind.paragraph, .setextHeading, .thematicBreak].contains(oldBlocks[winLast + 1].kind) {
                     return nil
                 }
             default: break
@@ -384,10 +385,11 @@ enum BlockParser {
                 blocks.append(Block(kind: .list, range: union(lines[i...end])))
                 i = end + 1
 
-            } else if isTableRow(line), i + 1 < lines.count, isTableSeparator(lineText(i + 1)) {
-                // GFM table: a `|…|` header, a `|-…-|` separator, then data rows.
+            } else if i + 1 < lines.count, isTableStart(header: line, delimiter: lineText(i + 1)) {
+                // GFM table: a header row, a `---|---` delimiter row, then data rows (outer pipes optional).
                 var end = i + 1
-                while end + 1 < lines.count, isTableRow(lineText(end + 1)) { end += 1 }
+                while end + 1 < lines.count, isTableDataRow(lineText(end + 1)),   // mlisb
+                      fenceCloseIndex(from: end + 1) == nil { end += 1 }
                 blocks.append(Block(kind: .table, range: union(lines[i...end])))
                 i = end + 1
 
@@ -423,7 +425,7 @@ enum BlockParser {
                     // block-LaTeX run, or an extension fence interrupts it —
                     // an unclosed opener stays part of the paragraph.
                     if fenceCloseIndex(from: end + 1) != nil { break }
-                    if isTableRow(next), end + 2 < lines.count, isTableSeparator(lineText(end + 2)) { break }
+                    if end + 2 < lines.count, isTableStart(header: next, delimiter: lineText(end + 2)) { break }  // mlisb
                     if isBlockLatexOpen(next), blockLatexCloseIndex(from: end + 1) != nil { break }
                     if registry.blockEntry(opening: next) != nil { break }
                     end += 1
@@ -437,12 +439,12 @@ enum BlockParser {
 
     // MARK: - Line classification
 
-    private static func isBlank(_ line: String) -> Bool {
+    static func isBlank(_ line: String) -> Bool {
         line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// `^\s*(-{3,}|\*{3,}|_{3,})\s*$` — a solid run of 3+ of one of `- * _`.
-    private static func isThematicBreak(_ line: String) -> Bool {
+    static func isThematicBreak(_ line: String) -> Bool {
         let t = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard t.count >= 3, let first = t.first,
               first == "-" || first == "*" || first == "_" else { return false }
@@ -465,7 +467,7 @@ enum BlockParser {
     }
 
     /// `^\s*#{1,6} +…` — 1–6 hashes after optional indent, then at least one space.
-    private static func isHeading(_ line: String) -> Bool {
+    static func isHeading(_ line: String) -> Bool {
         var rest = Substring(line).drop { $0 == " " || $0 == "\t" }
         var hashes = 0
         while let c = rest.first, c == "#" { hashes += 1; rest = rest.dropFirst() }
@@ -474,7 +476,7 @@ enum BlockParser {
     }
 
     /// `^[ \t]{0,3}>…` — up to 3 leading spaces/tabs, then a `>`.
-    private static func isBlockquote(_ line: String) -> Bool {
+    static func isBlockquote(_ line: String) -> Bool {
         var rest = Substring(line)
         var indent = 0
         while indent < 3, let c = rest.first, c == " " || c == "\t" {
@@ -502,14 +504,72 @@ enum BlockParser {
         return after == " " || after == "\t"
     }
 
+    /// mlisb: a table starts at a header row over a delimiter row. The outer-piped form is as it always was;
+    /// without outer pipes the header needs a pipe and as many cells as the delimiter row has columns (GFM).
+    static func isTableStart(header: String, delimiter: String) -> Bool {
+        if isTableRow(header), isTableSeparator(delimiter) { return true }
+        guard hasUnescapedPipe(header), let columns = delimiterColumns(delimiter) else { return false }
+        return tableCellCount(header) == columns
+    }
+
+    /// mlisb: a body row — an outer-piped row, or any non-blank line with a pipe that does not start another block.
+    static func isTableDataRow(_ line: String) -> Bool {
+        if isTableRow(line) { return true }
+        return hasUnescapedPipe(line) && !isBlank(line) && !isHeading(line) && !isBlockquote(line)
+            && !isListItem(line) && !isThematicBreak(line)
+    }
+
+    private static func hasUnescapedPipe(_ line: String) -> Bool {
+        var escaped = false
+        for ch in line {
+            if escaped { escaped = false } else if ch == "\\" { escaped = true } else if ch == "|" { return true }
+        }
+        return false
+    }
+
+    /// The row's cells between optional outer pipes, split on unescaped pipes (not trimmed).
+    private static func tableCells(_ line: String) -> [Substring] {
+        var s = Substring(line.trimmingCharacters(in: .whitespacesAndNewlines))
+        if s.hasPrefix("|") { s = s.dropFirst() }
+        if s.hasSuffix("|"), !s.dropLast().hasSuffix("\\") { s = s.dropLast() }
+        var cells: [Substring] = []
+        var start = s.startIndex
+        var escaped = false
+        var i = s.startIndex
+        while i < s.endIndex {
+            let ch = s[i]
+            if escaped { escaped = false } else if ch == "\\" { escaped = true } else if ch == "|" {
+                cells.append(s[start..<i]); start = s.index(after: i)
+            }
+            i = s.index(after: i)
+        }
+        cells.append(s[start...])
+        return cells
+    }
+
+    private static func tableCellCount(_ line: String) -> Int { tableCells(line).count }
+
+    /// Column count of a delimiter row (`:?-+:?` cells), nil when the line is not one or has no pipe.
+    private static func delimiterColumns(_ line: String) -> Int? {
+        guard hasUnescapedPipe(line) else { return nil }
+        let cells = tableCells(line)
+        for cell in cells {
+            var c = Substring(cell.trimmingCharacters(in: .whitespaces))
+            if c.hasPrefix(":") { c = c.dropFirst() }
+            if c.hasSuffix(":") { c = c.dropLast() }
+            guard !c.isEmpty, c.allSatisfy({ $0 == "-" }) else { return nil }
+        }
+        return cells.count
+    }
+
     /// A GFM table row: `^[ \t]*\|.+\|[ \t]*$` — outer pipes, content between.
-    private static func isTableRow(_ line: String) -> Bool {
+    static func isTableRow(_ line: String) -> Bool {
         let t = line.trimmingCharacters(in: .whitespacesAndNewlines)
         return t.count >= 3 && t.hasPrefix("|") && t.hasSuffix("|")
     }
 
     /// A GFM table separator: `^[ \t]*\|[- \t:|]+\|[ \t]*$` — only `- : |` + ws inside.
-    private static func isTableSeparator(_ line: String) -> Bool {
+    static func isTableSeparator(_ line: String) -> Bool {
         let t = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard t.count >= 3, t.hasPrefix("|"), t.hasSuffix("|") else { return false }
         let middle = t.dropFirst().dropLast()
