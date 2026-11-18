@@ -1,11 +1,27 @@
 import Foundation
+import MlisbKit
 import Observation
 
 /// One open markdown file. `text` is exactly the file's contents; bytes the user
 /// didn't touch are written back unchanged.
 @MainActor @Observable final class Document {
     let url: URL
-    var text: String { didSet { if text != oldValue { scheduleSave() } } }
+    var text: String {
+        didSet {
+            guard text != oldValue else { return }
+            if !loadingFromDisk {
+                let e = Self.edit(oldValue, text)
+                review.localEdit(range: e.range, replacement: e.replacement)
+            }
+            scheduleSave()
+        }
+    }
+    /// What changed since the reader last marked the file reviewed.
+    private(set) var review = ChangeReview(baseline: "", current: "")
+    /// The change the reader last stepped to; a removed one has no text to select, so the bar quotes it.
+    var current: TextChange?
+    var showingHistory = false
+    let history: HistoryStore
     /// Set when the file changed on disk while there were unsaved edits.
     private(set) var conflictingDiskText: String?
     private(set) var error: String?
@@ -14,9 +30,19 @@ import Observation
     private var diskText: String
     private var saveTask: Task<Void, Never>?
     private var watcher: FileWatcher?
+    private var loadingFromDisk = false
 
-    init(url: URL) {
+    /// Shared by all documents; pruned once per launch, off the main thread.
+    static let sharedHistory: HistoryStore = {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let store = HistoryStore(directory: base.appendingPathComponent("History"))
+        Task.detached(priority: .utility) { try? store.prune() }
+        return store
+    }()
+
+    init(url: URL, history: HistoryStore = Document.sharedHistory) {
         self.url = url
+        self.history = history
         text = ""
         diskText = ""
         reload()
@@ -32,7 +58,14 @@ import Observation
             error = nil
             needsAccess = false
             diskText = loaded
-            text = loaded
+            setFromDisk(loaded)
+            try? history.record(loaded, for: url, origin: .opened)
+            var baseline = history.reviewedBaseline(for: url)
+            if baseline == nil {
+                baseline = loaded
+                try? history.setReviewedBaseline(loaded, for: url)
+            }
+            review = ChangeReview(baseline: baseline!, current: loaded)
             watcher = FileWatcher(url: url) { [weak self] in self?.diskChanged() }
         } catch {
             needsAccess = (error as? CocoaError)?.code == .fileReadNoPermission
@@ -67,6 +100,7 @@ import Observation
             // symlinks, and because a single-file sandbox grant can't create a sibling.
             try Data(text.utf8).write(to: url)
             diskText = text
+            try? history.record(text, for: url, origin: .saved)
         } catch {
             self.error = error.localizedDescription
         }
@@ -76,7 +110,7 @@ import Observation
         guard let onDisk = try? Self.read(url), onDisk != diskText else { return }
         if text == diskText {
             diskText = onDisk
-            text = onDisk
+            externalChange(onDisk)
         } else if onDisk != text {
             conflictingDiskText = onDisk
         } else {
@@ -88,6 +122,46 @@ import Observation
         guard let onDisk = conflictingDiskText else { return }
         conflictingDiskText = nil
         diskText = onDisk
-        if keepMine { save() } else { text = onDisk }
+        if keepMine { save() } else { externalChange(onDisk) }
+    }
+
+    private func setFromDisk(_ new: String) {
+        loadingFromDisk = true
+        text = new
+        loadingFromDisk = false
+    }
+
+    private func externalChange(_ new: String) {
+        setFromDisk(new)
+        try? history.record(new, for: url, origin: .external)
+        review.externalChange(current: new)
+        current = nil
+    }
+
+    func markReviewed() {
+        review.markReviewed(current: text)
+        try? history.setReviewedBaseline(text, for: url)
+        current = nil
+    }
+
+    /// Keeps the replaced text in history, then makes `version` the text as an ordinary edit.
+    func restore(_ version: HistoryStore.Version) throws {
+        guard conflictingDiskText == nil, !isReadOnly else { return }
+        let old = try history.text(of: version)
+        try history.record(text, for: url, origin: .saved)
+        text = old
+    }
+
+    /// The smallest UTF-16 range of `old` whose replacement turns it into `new`.
+    nonisolated static func edit(_ old: String, _ new: String) -> (range: NSRange, replacement: String) {
+        let a = Array(old.utf16), b = Array(new.utf16)
+        var p = 0
+        while p < a.count, p < b.count, a[p] == b[p] { p += 1 }
+        if p > 0, UTF16.isLeadSurrogate(a[p - 1]) { p -= 1 }
+        var s = 0
+        while s < a.count - p, s < b.count - p, a[a.count - 1 - s] == b[b.count - 1 - s] { s += 1 }
+        if s > 0, UTF16.isTrailSurrogate(a[a.count - s]) { s -= 1 }
+        return (NSRange(location: p, length: a.count - p - s),
+                String(decoding: b[p..<b.count - s], as: UTF16.self))
     }
 }

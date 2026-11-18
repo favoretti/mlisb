@@ -34,6 +34,7 @@ struct EditorPane: View {
         }
         .focusedSceneValue(\.editorBus, bus)
         .focusedSceneValue(\.document, document)
+        .reviewUI(document)
         .onReceive(NotificationCenter.default.publisher(for: bus.name("showFind"))) { _ in showFind = true }
         .onDisappear { document.save() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in

@@ -30,6 +30,7 @@ struct MlisbApp: App {
             }
             SidebarCommands()
             FormatCommands()
+            ReviewCommands()
             ExportCommands()
         }
 #if canImport(Sparkle)
