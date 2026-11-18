@@ -310,17 +310,17 @@ public enum MarkdownHTMLRenderer {
             }
 
         case .link(_, _, let url, _, let children):
-            return "<a href=\"\(escape(ns.substring(with: url)))\">\(renderInlines(children, ns: ns, env: env, linkable: false))</a>"
+            return "<a href=\"\(target(ns.substring(with: url)))\">\(renderInlines(children, ns: ns, env: env, linkable: false))</a>"
 
         case .image(_, let alt, let url, _):
-            return "<img src=\"\(escape(ns.substring(with: url)))\" alt=\"\(escape(ns.substring(with: alt)))\">"
+            return "<img src=\"\(target(ns.substring(with: url)))\" alt=\"\(escape(ns.substring(with: alt)))\">"
 
         case .wikiLink(_, let name, _, _):
             return escape(ns.substring(with: name))
 
         case .imageEmbed(_, let target, _):
-            let t = escape(ns.substring(with: target))
-            return "<img src=\"\(t)\" alt=\"\(t)\">"
+            let name = ns.substring(with: target)
+            return "<img src=\"\(self.target(name))\" alt=\"\(escape(name))\">"
 
         case .ext(let node):
             if node.extensionID.hasPrefix(GFMInline.idPrefix) {  // mlisb
@@ -361,10 +361,10 @@ public enum MarkdownHTMLRenderer {
             case "img":
                 // Only the vetted attributes are re-emitted, escaped.
                 let tag = GFMHTML.tag(ns, at: node.range.location, end: NSMaxRange(node.range))
-                var out = "<img src=\"\(escape(tag?.attribute("src")?.value ?? ""))\" alt=\"\(escape(tag?.attribute("alt")?.value ?? ""))\""
+                var out = "<img src=\"\(target(tag?.attribute("src")?.value ?? ""))\" alt=\"\(escape(tag?.attribute("alt")?.value ?? ""))\""
                 for dim in ["width", "height"] { if let v = tag?.attribute(dim)?.value { out += " \(dim)=\"\(escape(v))\"" } }
                 return out + ">"
-            case "a": return "<a href=\"\(escape(node.target ?? ""))\">\(renderInlines(node.children, ns: ns, env: env, linkable: false))</a>"
+            case "a": return "<a href=\"\(target(node.target ?? ""))\">\(renderInlines(node.children, ns: ns, env: env, linkable: false))</a>"
             case "code": return "<code>\(escape(ns.substring(with: node.contentRange)))</code>"
             default: return "<\(name)>\(renderInlines(node.children, ns: ns, env: env))</\(name)>"
             }
@@ -374,9 +374,9 @@ public enum MarkdownHTMLRenderer {
             let id = escape(ns.substring(with: node.contentRange))
             return "<sup class=\"footnote-ref\"><a href=\"#fn-\(id)\">\(id)</a></sup>"
         case GFMInline.refImageID:
-            return "<img src=\"\(escape(node.target ?? ""))\" alt=\"\(escape(ns.substring(with: node.contentRange)))\">"
+            return "<img src=\"\(target(node.target ?? ""))\" alt=\"\(escape(ns.substring(with: node.contentRange)))\">"
         default:
-            return "<a href=\"\(escape(node.target ?? ""))\">\(renderInlines(node.children, ns: ns, env: env, linkable: false))</a>"
+            return "<a href=\"\(target(node.target ?? ""))\">\(renderInlines(node.children, ns: ns, env: env, linkable: false))</a>"
         }
     }
 
@@ -404,7 +404,7 @@ public enum MarkdownHTMLRenderer {
         for match in matches {
             guard let url = match.url else { continue }
             out += escape(ns.substring(with: NSRange(location: cursor, length: match.range.location - cursor)))
-            out += "<a href=\"\(escape(url.absoluteString))\">\(escape(ns.substring(with: match.range)))</a>"
+            out += "<a href=\"\(target(url.absoluteString))\">\(escape(ns.substring(with: match.range)))</a>"
             cursor = NSMaxRange(match.range)
         }
         out += escape(ns.substring(from: cursor))
@@ -412,6 +412,9 @@ public enum MarkdownHTMLRenderer {
     }
 
     // MARK: - Escaping
+
+    /// mlisb: an address for `href` or `src`; anything `LinkSafety` refuses becomes `#`.
+    private static func target(_ raw: String) -> String { escape(LinkSafety.isSafe(raw) ? raw : "#") }
 
     private static func escape(_ s: String) -> String {
         var out = ""

@@ -74,6 +74,10 @@ struct ExportTests {
         #expect(!html.contains("<script"))
         #expect(!html.contains("<img>"))
         #expect(!html.contains("javascript:"))
+        let disguised = await Exporter.html(markdown: "[a](java\tscript:alert(1)) [b](data:text/html,x) ![c](javascript:alert(1)) [ok](https://example.com)",
+                                            title: "t", baseURL: nil)
+        #expect(!disguised.contains("script:alert") && !disguised.contains("data:text/html"))
+        #expect(disguised.contains("href=\"https://example.com\""))
         #expect(html.components(separatedBy: "</style>").count == 2)
         #expect(html.components(separatedBy: "</title>").count == 2)
     }

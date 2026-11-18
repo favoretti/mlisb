@@ -45,10 +45,7 @@ enum GFMHTML {
         }
     }
 
-    private static func isUnsafeTarget(_ value: String) -> Bool {
-        let t = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return t.hasPrefix("javascript:") || t.hasPrefix("vbscript:") || t.hasPrefix("data:")
-    }
+    private static func isUnsafeTarget(_ value: String) -> Bool { !LinkSafety.isSafe(value) }
 
     private static func isSpace(_ c: unichar) -> Bool { c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D }
     private static func isLetter(_ c: unichar) -> Bool { (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) }

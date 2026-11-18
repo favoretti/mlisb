@@ -67,12 +67,15 @@ public enum ExportFormat: String, CaseIterable, Sendable { case html, pdf, jpeg,
             return await diagram(language, unescape(g[1]))
         }
         html = await replacing(html, #"<img src="([^"]*)""#) { g in
-            guard let uri = dataURI(unescape(g[0]), baseURL: baseURL) else { return nil }
+            let source = unescape(g[0])
+            guard LinkSafety.isSafe(source) else { return "<img src=\"#\"" }
+            guard let uri = dataURI(source, baseURL: baseURL) else { return nil }
             return "<img src=\"\(uri)\""
         }
-        // A markdown link can carry any scheme.
-        return html.replacingOccurrences(of: #"href="\s*(javascript|vbscript):"#, with: "href=\"#",
-                                         options: [.regularExpression, .caseInsensitive])
+        // A second check at the export boundary; the renderer already refuses these targets.
+        return await replacing(html, #"href="([^"]*)""#) { g in
+            LinkSafety.isSafe(unescape(g[0])) ? nil : "href=\"#\""
+        }
     }
 
     private static let imageTypes = ["png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
