@@ -23,10 +23,11 @@ public struct SearchError: LocalizedError, Sendable {
 }
 
 public enum FolderSearch {
-    static let extensions: Set<String> = ["md", "markdown", "mdown", "mkd", "mdx"]
+    /// The one list of markdown extensions; bin/mlisb and app/project.yml repeat it (a test keeps them equal).
+    public static let extensions: Set<String> = ["md", "markdown", "mdown", "mkd", "mdx", "qmd", "rmd", "mdc"]
     static let skipped: Set<String> = ["node_modules", "build", "DerivedData", "Pods", "vendor", "dist", "target"]
 
-    /// Markdown files under `root` (md, markdown, mdown, mkd, mdx), sorted by path. At most `limit`.
+    /// Markdown files under `root` (see `extensions`), sorted by path. At most `limit`.
     public static func markdownFiles(in root: URL, limit: Int = 5000) -> [URL] {
         let keys: Set<URLResourceKey> = [.isDirectoryKey, .fileSizeKey]
         guard let walker = FileManager.default.enumerator(

@@ -1,3 +1,4 @@
+import MlisbKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -6,6 +7,7 @@ struct MlisbApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage("sourceMode") private var sourceMode = false
     @AppStorage("showOutline") private var showOutline = false
+    @AppStorage("textSize") private var textSize = ReadingSettings.defaultSize
 
 #if canImport(Sparkle)
     @StateObject private var updater = UpdaterModel()
@@ -28,6 +30,11 @@ struct MlisbApp: App {
             CommandGroup(before: .sidebar) {
                 Toggle("Source Mode", isOn: $sourceMode).keyboardShortcut("/")
                 Toggle("Table of Contents", isOn: $showOutline).keyboardShortcut("t", modifiers: [.command, .shift])
+                Divider()
+                Button("Bigger") { textSize = ReadingSettings.step(textSize, by: 1) }.keyboardShortcut("+")
+                Button("Smaller") { textSize = ReadingSettings.step(textSize, by: -1) }.keyboardShortcut("-")
+                Button("Actual Size") { textSize = ReadingSettings.defaultSize }.keyboardShortcut("0")
+                Divider()
             }
             SidebarCommands()
             FormatCommands()
@@ -36,6 +43,8 @@ struct MlisbApp: App {
         }
 #if canImport(Sparkle)
         Settings { SettingsView(updater: updater) }
+#else
+        Settings { SettingsView() }
 #endif
     }
 }
@@ -74,7 +83,7 @@ extension FocusedValues {
     let panel = NSOpenPanel()
     panel.canChooseDirectories = true
     panel.allowsMultipleSelection = true
-    panel.allowedContentTypes = [.folder] + ["md", "markdown", "mdown"].compactMap { UTType(filenameExtension: $0) }
+    panel.allowedContentTypes = [.folder] + FolderSearch.extensions.compactMap { UTType(filenameExtension: $0) }
     return panel.runModal() == .OK ? panel.urls : []
 }
 

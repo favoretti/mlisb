@@ -65,6 +65,13 @@ fresh; sh "$mlisb" fresh.md:5
 assert "missing markdown file is created" test -f fresh.md
 assert "missing file with :N still gets the line" grep -q "&line=5\$" "$OPEN_LOG"
 
+for ext in mkd mdx qmd rmd mdc; do
+  fresh; sh "$mlisb" "extra.$ext"
+  assert "creates missing .$ext file" test -f "extra.$ext"
+  fresh; : > "$T/n.$ext"; printf '{"tool_input":{"file_path":"%s/n.%s"}}' "$T" "$ext" | sh "$mlisb" notify
+  assert "notify accepts .$ext" grep -q "n.$ext" "$OPEN_LOG"
+done
+
 fresh; sh "$mlisb" made.md
 assert "creates missing markdown file" test -f made.md
 check "created file is opened" "open

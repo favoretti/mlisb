@@ -1,12 +1,27 @@
-#if canImport(Sparkle)
 import SwiftUI
 
 struct SettingsView: View {
+#if canImport(Sparkle)
     @ObservedObject var updater: UpdaterModel
+#endif
+    @AppStorage("textSize") private var textSize = ReadingSettings.defaultSize
+    @AppStorage("lineWidth") private var lineWidth = LineWidth.medium
 
     var body: some View {
         Form {
+            Section("Reading") {
+                LabeledContent("Text size") {
+                    Stepper("\(ReadingSettings.clamp(textSize)) pt",
+                            value: Binding(get: { ReadingSettings.clamp(textSize) }, set: { textSize = ReadingSettings.clamp($0) }),
+                            in: ReadingSettings.sizes)
+                }
+                Picker("Line width", selection: $lineWidth) {
+                    ForEach(LineWidth.allCases) { Text($0.label).tag($0) }
+                }
+            }
+#if canImport(Sparkle)
             UpdatesSettings(updater: updater)
+#endif
         }
         .formStyle(.grouped)
         .frame(width: 460)
@@ -14,6 +29,7 @@ struct SettingsView: View {
     }
 }
 
+#if canImport(Sparkle)
 private struct UpdatesSettings: View {
     @ObservedObject var updater: UpdaterModel
 

@@ -1,11 +1,12 @@
 import Foundation
+import MlisbKit
 import Observation
 
 struct Entry: Hashable { let url: URL; let isDir: Bool }
 
 /// File-system helpers behind the sidebar.
 enum FS {
-    static let markdown: Set<String> = ["md", "markdown", "mdown"]
+    static let markdown = FolderSearch.extensions
     static let previewable: Set<String> = ["png", "jpg", "jpeg", "gif", "webp", "heic", "svg", "pdf"]
 
     static func isDir(_ url: URL) -> Bool {

@@ -27,6 +27,7 @@
 			<key>QLSupportedContentTypes</key>
 			<array>
 				<string>net.daringfireball.markdown</string>
+				<string>net.favoretti.mlisb.markdown-extra</string>
 			</array>
 			<key>QLThumbnailMinimumDimension</key>
 			<integer>0</integer>

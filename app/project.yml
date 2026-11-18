@@ -36,6 +36,8 @@ targets:
         product: MarkdownEngine
       - package: MarkdownEngine
         product: MarkdownEngineCodeBlocks
+      - package: MarkdownEngine
+        product: MarkdownEngineLatex
       - package: MlisbKit
       - package: Sparkle
       - target: mlisbQuickLook
@@ -56,11 +58,18 @@ targets:
           - CFBundleTypeName: Markdown
             CFBundleTypeRole: Editor
             LSHandlerRank: Alternate
-            LSItemContentTypes: [net.daringfireball.markdown]
+            LSItemContentTypes: [net.daringfireball.markdown, net.favoretti.mlisb.markdown-extra]
           - CFBundleTypeName: Folder
             CFBundleTypeRole: Editor
             LSHandlerRank: Alternate
             LSItemContentTypes: [public.folder]
+        # Extensions the system's markdown type doesn't claim; with md, markdown and mdown this is FolderSearch.extensions.
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: net.favoretti.mlisb.markdown-extra
+            UTTypeDescription: Markdown
+            UTTypeConformsTo: [net.daringfireball.markdown]
+            UTTypeTagSpecification:
+              public.filename-extension: [mkd, mdx, qmd, rmd, mdc]
         SUFeedURL: https://github.com/favoretti/mlisb/releases/latest/download/appcast.xml
         SUPublicEDKey: hKvkZpU81lRfsYqGs/00iTPCBd6PQcYIYPAa4Z3qqTg=
         SUEnableAutomaticChecks: true
@@ -122,7 +131,7 @@ targets:
           NSExtensionPointIdentifier: com.apple.quicklook.preview
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PreviewViewController
           NSExtensionAttributes:
-            QLSupportedContentTypes: [net.daringfireball.markdown]
+            QLSupportedContentTypes: [net.daringfireball.markdown, net.favoretti.mlisb.markdown-extra]
             QLIsDataBasedPreview: false
     entitlements:
       path: QuickLook/QuickLook.entitlements
@@ -147,7 +156,7 @@ targets:
           NSExtensionPointIdentifier: com.apple.quicklook.thumbnail
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ThumbnailProvider
           NSExtensionAttributes:
-            QLSupportedContentTypes: [net.daringfireball.markdown]
+            QLSupportedContentTypes: [net.daringfireball.markdown, net.favoretti.mlisb.markdown-extra]
             QLThumbnailMinimumDimension: 0
     entitlements:
       path: Thumbnail/Thumbnail.entitlements

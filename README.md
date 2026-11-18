@@ -10,6 +10,9 @@ mlisb is aimed at AI-assisted development, where repositories are full of `.md` 
 
 - Live editing. Markdown syntax is hidden except where the cursor is. A source mode shows all syntax.
 - `mermaid` and `d2` code blocks render as diagrams in place. Source shows when the cursor enters the block. A failed render shows the error.
+- Math: `$…$` and `$$…$$` render in place; a formula that fails to parse stays as source.
+- Settings (⌘,) set the text size (12 to 24 pt) and line width; View → Bigger, Smaller and Actual Size (⌘+, ⌘-, ⌘0) change the size.
+- Markdown extensions: `md`, `markdown`, `mdown`, `mkd`, `mdx`, `qmd`, `rmd`, `mdc`.
 - The file's text is saved back unchanged, except where you typed.
 - Autosave 1 second after typing stops. Silent reload when the file changes on disk. If both changed, a "Keep Mine / Load Theirs" banner appears.
 - Folder sidebar: new file or folder, rename, drag to move, move to Trash, reveal in Finder, and Quick Look preview for images and PDFs.
@@ -48,7 +51,7 @@ Re-run `xcodegen generate` after adding or removing source files. Local builds a
 
 #### Coding agent hook
 
-`mlisb notify` reads one JSON object on stdin (a Claude Code `PostToolUse` payload), and if `tool_input.file_path` (or `tool_input.path`, or `tool_response.filePath`) is an existing `.md`, `.markdown` or `.mdown` file, opens it in mlisb without taking focus. It prints nothing and always exits 0, so it never slows or fails the agent's turn.
+`mlisb notify` reads one JSON object on stdin (a Claude Code `PostToolUse` payload), and if `tool_input.file_path` (or `tool_input.path`, or `tool_response.filePath`) is an existing `.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`, `.qmd`, `.rmd` or `.mdc` file, opens it in mlisb without taking focus. It prints nothing and always exits 0, so it never slows or fails the agent's turn.
 
 `mlisb hook install` adds a `PostToolUse` hook (matcher `Write|Edit|MultiEdit`) running `<path to mlisb> notify` to `~/.claude/settings.json`. `mlisb hook uninstall` removes it. Both take `--settings PATH`. Other settings are kept, a copy of the old file is saved as `settings.json.mlisb-backup`, and a file that is not valid JSON is refused and left alone.
 

@@ -31,7 +31,7 @@ notify() {
     f=
   done
   case $(printf %s "$f" | tr '[:upper:]' '[:lower:]') in
-    *.md|*.markdown|*.mdown) open -g -b "$bundle" "$f" ;;
+    *.md|*.markdown|*.mdown|*.mkd|*.mdx|*.qmd|*.rmd|*.mdc) open -g -b "$bundle" "$f" ;;
   esac
 }
 
@@ -126,7 +126,7 @@ while [ "$n" -gt 0 ]; do
         case ${arg##*:} in ''|*[!0-9]*) ;; *) case $arg in *:*) line=${arg##*:}; arg=${arg%:*} ;; esac ;; esac
       fi
       case "$arg" in
-        *.md|*.markdown|*.mdown) [ -e "$arg" ] || : > "$arg" ;;
+        *.md|*.markdown|*.mdown|*.mkd|*.mdx|*.qmd|*.rmd|*.mdc) [ -e "$arg" ] || : > "$arg" ;;
       esac ;;
   esac
   if [ -n "$line" ]; then

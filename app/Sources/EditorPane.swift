@@ -1,5 +1,6 @@
 import MarkdownEngine
 import MarkdownEngineCodeBlocks
+import MarkdownEngineLatex
 import SwiftUI
 
 struct EditorPane: View {
@@ -8,6 +9,8 @@ struct EditorPane: View {
     var showInWorkspace: (URL) -> Bool = { _ in false }
     @AppStorage("sourceMode") private var sourceMode = false
     @AppStorage("showOutline") private var showOutline = false
+    @AppStorage("textSize") private var textSize = ReadingSettings.defaultSize
+    @AppStorage("lineWidth") private var lineWidth = LineWidth.medium
     @State private var showFind = false
     @Environment(\.openWindow) private var openWindow
 
@@ -45,17 +48,20 @@ struct EditorPane: View {
         }
     }
 
+    private static let latex = SwiftMathBridge()
+
     private func editor(width: CGFloat) -> NativeTextViewWrapper {
         var config = MarkdownEditorConfiguration.default
         config.services.syntaxHighlighter = HighlightJSBridge()
         config.services.diagrams = Diagrams()
         config.services.images = LocalImages(folder: document.url.deletingLastPathComponent())
         config.services.bus = bus.engineBus
+        config.services.latex = Self.latex
         config.extensions = [StrikethroughExtension()]
         config.revealAllSyntax = sourceMode
-        // A centered column of at most 760pt that shrinks with the pane. (The engine's
+        // A centered column of at most the chosen width that shrinks with the pane. (The engine's
         // own readingWidth is a fixed width and clips in a narrow window.)
-        config.textInsets = TextInsets(horizontal: max(28, (width - 760) / 2), vertical: 12)
+        config.textInsets = TextInsets(horizontal: ReadingSettings.sideInset(paneWidth: width, width: lineWidth), vertical: 12)
         // Nothing may change what the user typed.
         config.lists.arrowReplacementEnabled = false
         config.spellChecking.automaticQuoteSubstitution = false
@@ -64,6 +70,7 @@ struct EditorPane: View {
         var editor = NativeTextViewWrapper(
             text: $document.text,
             configuration: config,
+            fontSize: CGFloat(ReadingSettings.clamp(textSize)),
             documentId: document.url.path,
             isEditable: !document.isReadOnly
         )
