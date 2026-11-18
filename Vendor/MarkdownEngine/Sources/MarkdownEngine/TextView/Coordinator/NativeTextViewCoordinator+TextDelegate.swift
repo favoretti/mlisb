@@ -1049,6 +1049,8 @@ extension NativeTextViewCoordinator {
             // (the mouseDown fallback mirrors that). Opening a link is navigation
             // too — flag it so mouseDown restores the pre-click caret.
             (textView as? NativeTextView)?.linkClickDidNavigate = true
+            // mlisb: nobody asked the user, so only web and mail addresses go on to AppKit's opener.
+            if let address = (link as? URL)?.absoluteString ?? link as? String, !LinkSafety.isSafe(address) { return true }
             return false
         }
         // Direkt deaktivieren, bevor der Navigation-Callback läuft.

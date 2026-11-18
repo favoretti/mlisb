@@ -32,13 +32,17 @@ struct PreviewView: View {
                         .font(.callout).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity).padding(6).background(.bar)
                 }
-                GeometryReader { geometry in
-                    NativeTextViewWrapper(
-                        text: .constant(text), configuration: Self.configuration(width: geometry.size.width),
-                        documentId: "preview", isEditable: false)
-                }
+                GeometryReader { geometry in Self.editor(text, width: geometry.size.width) }
             }
         }
+    }
+
+    static func editor(_ text: String, width: CGFloat) -> NativeTextViewWrapper {
+        var editor = NativeTextViewWrapper(
+            text: .constant(text), configuration: configuration(width: width), documentId: "preview", isEditable: false)
+        // A preview can't ask before opening, so it follows no links.
+        editor.onOpenLink = { _ in true }
+        return editor
     }
 
     static func configuration(width: CGFloat) -> MarkdownEditorConfiguration {

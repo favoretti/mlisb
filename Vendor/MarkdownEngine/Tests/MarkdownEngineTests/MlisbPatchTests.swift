@@ -249,6 +249,19 @@ struct MlisbHostedTests {
         #expect(model.opened.count == count)
     }
 
+    @Test("with no hook, only web and mail addresses fall through to AppKit")
+    func unhandledSchemesAreNotOpened() async throws {
+        let model = Model("[f](file:///Applications/Calculator.app) [s](ssh://host/x) [r][k] [w](https://x.org/p)\n\n[k]: vnc://host\n")
+        model.useHook = false
+        let (_, tv, c) = try await Self.stage(model)
+        let ns = tv.string as NSString
+        for (label, falls) in [("f", false), ("s", false), ("r", false), ("w", true)] {
+            let loc = ns.range(of: "[\(label)]").location + 1
+            let link = try #require(tv.textStorage?.attribute(.link, at: loc, effectiveRange: nil))
+            #expect(c.textView(tv, clickedOnLink: link, at: loc) == !falls, "\(label)")
+        }
+    }
+
     @Test("flipping revealAllSyntax restyles in place and keeps undo")
     func revealFlip() async throws {
         let model = Model("a **bold** b\n")
