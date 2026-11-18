@@ -235,6 +235,7 @@ enum MarkdownStyler {
         // NSImage rendering reuses the existing, proven machinery.
         let imgT0 = DispatchTime.now().uptimeNanoseconds
         result += styleBlockLatex(ctx)
+        result += styleDiagramFences(ctx)  // mlisb
         result += styleInlineLatex(ctx)
         result += styleImageEmbeds(ctx)
         result += styleImageLinks(ctx)

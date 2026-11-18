@@ -127,7 +127,8 @@ struct MarkdownLists {
                 : false
         )
 
-        if replacementString == ">" && affectedCharRange.length == 0 && !isInCodeBlock {
+        if replacementString == ">" && affectedCharRange.length == 0 && !isInCodeBlock
+            && activeConfig.lists.arrowReplacementEnabled {  // mlisb: opt-out of `->` rewrite
             let insertionLocation = affectedCharRange.location
             guard insertionLocation > 0 else { return true }
             let nsText = textView.string as NSString

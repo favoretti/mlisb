@@ -98,6 +98,11 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// resolved opaque identifier (or the display name when no resolver
     /// was supplied).
     public var onLinkClick: ((String) -> Void)?
+    // mlisb: embedder-opened links.
+    /// Called with the raw target of a clicked markdown link or bare URL, exactly
+    /// as written (`./a.md`, `#anchor`, `mailto:a@b.c`). Return `true` when handled;
+    /// `false` (or nil) keeps the default open. Wiki links use `onLinkClick`.
+    public var onOpenLink: ((String) -> Bool)?
     /// Fires whenever the caret rect inside an active wiki-link changes,
     /// so embedders can position a follow-the-caret UI.
     public var onCaretRectChange: ((CGRect) -> Void)?
@@ -250,6 +255,11 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         // `applyManagedFrameSize` ensures SwiftUI re-queries after every width-driven
         // relayout, so the returned height stays correct.
         return CGSize(width: width, height: container.scrollableContentHeight)
+    }
+
+    // mlisb: a diagram that finished rendering restyles like a changed image.
+    private var imageFingerprint: AnyHashable {
+        AnyHashable([configuration.services.images.fingerprint(), configuration.services.diagrams.fingerprint()])
     }
 
     public func makeNSView(context: Context) -> NSScrollView {
@@ -563,8 +573,18 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         // makeNSView used to write it — an embedder settings change was inert
         // until the editor was rebuilt. Plain assignment: a tiny value struct,
         // and no rebuild is needed for it to take effect.
+        context.coordinator.onOpenLink = onOpenLink  // mlisb
         textView.configuration.lists = configuration.lists
         context.coordinator.configuration.lists = configuration.lists
+        // mlisb: a flip restyles in place; no rebuild, undo stack kept.
+        if context.coordinator.configuration.revealAllSyntax != configuration.revealAllSyntax {
+            context.coordinator.configuration.revealAllSyntax = configuration.revealAllSyntax
+            textView.configuration.revealAllSyntax = configuration.revealAllSyntax
+            let fullRange = NSRange(location: 0, length: (textView.string as NSString).length)
+            if fullRange.length > 0 {
+                context.coordinator.restyleParagraphs([fullRange], in: textView)
+            }
+        }
         // Sync registered extensions (inline spans + fenced blocks) and directives. A change alters
         // the GRAMMAR (tokens differ under the new registry), so the coordinator's parsed
         // cache must drop before the restyle — the parse-layer memos invalidate
@@ -600,7 +620,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         // (e.g. when the available wiki-link targets change). Cheap pointer-/
         // value-based comparison; full equality isn't required because the
         // embedder is the source of truth.
-        let newImageFingerprint = configuration.services.images.fingerprint()
+        let newImageFingerprint = imageFingerprint
         let newWikiFingerprint = configuration.services.wikiLinks.fingerprint()
         let imageChanged = newImageFingerprint != context.coordinator.lastImageFingerprint
         let wikiChanged = newWikiFingerprint != context.coordinator.lastWikiFingerprint
@@ -659,6 +679,11 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             && !fontChanged {
             return
         }
+        // mlisb: bound text replaced from outside for the same document keeps caret and scroll.
+        let externalReplace = !isNodeSwitch && context.coordinator.didInitialFormatting
+            && context.coordinator.lastSyncedText != text
+        let keptSelection = externalReplace ? textView.selectedRange() : nil
+        let keptScrollY = nsView.contentView.bounds.origin.y
         if fontChanged {
             context.coordinator.didInitialFormatting = false
         }
@@ -732,10 +757,15 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             textView,
             from: text,
             invalidateLayout: isNodeSwitch || rawSourceModeChanged,
-            restoring: context.coordinator.selectionToRestore(for: documentId, text: text)
+            restoring: context.coordinator.selectionToRestore(for: documentId, text: text) ?? keptSelection
         )
         textView.recalcOverscroll(for: nsView)
         (nsView as? ClampedScrollView)?.clampToInsets()
+        if externalReplace {  // mlisb: clampToInsets limits it to the new height
+            nsView.contentView.scroll(to: NSPoint(x: nsView.contentView.bounds.origin.x, y: keptScrollY))
+            nsView.reflectScrolledClipView(nsView.contentView)
+            (nsView as? ClampedScrollView)?.clampToInsets()
+        }
         // Height is measured now, so restore the saved offset; clampToInsets keeps
         // it in range if the document got shorter. Latched rather than gated on
         // `isNodeSwitch`, because a remount is not a switch and its first pass still
@@ -830,7 +860,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         // arm the restore here or a remount would always open at the top.
         coordinator.armScrollRestore(for: documentId)
         coordinator.configuration = configuration
-        coordinator.lastImageFingerprint = configuration.services.images.fingerprint()
+        coordinator.lastImageFingerprint = imageFingerprint
         coordinator.lastWikiFingerprint = configuration.services.wikiLinks.fingerprint()
         coordinator.onCodeBlockSelectionChange = onCodeBlockSelectionChange
         coordinator.onInlinePreviewKey = onInlinePreviewKey

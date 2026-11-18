@@ -1,0 +1,18 @@
+#!/bin/sh
+# Opens files or folders in mlisb. "-" reads stdin; a missing markdown file is created.
+set -e
+n=$#
+while [ "$n" -gt 0 ]; do
+  arg=$1; shift; n=$((n - 1))
+  case "$arg" in
+    -)
+      arg=$(mktemp "${TMPDIR:-/tmp}/mlisb-XXXXXX")
+      mv "$arg" "$arg.md"; arg="$arg.md"
+      cat > "$arg" ;;
+    *.md|*.markdown|*.mdown)
+      [ -e "$arg" ] || : > "$arg" ;;
+  esac
+  set -- "$@" "$arg"
+done
+# Going through LaunchServices is what grants the sandboxed app access to these paths.
+exec open -b net.favoretti.mlisb "$@"

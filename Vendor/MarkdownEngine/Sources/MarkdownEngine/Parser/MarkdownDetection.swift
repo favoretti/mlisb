@@ -17,8 +17,10 @@ enum MarkdownDetection {
         selectionRange: NSRange,
         tokens: [MarkdownToken],
         in text: NSString,
-        suppressed: Bool = false
+        suppressed: Bool = false,
+        revealAll: Bool = false
     ) -> Set<Int> {
+        if revealAll { return Set(tokens.indices) }  // mlisb
         // Read-only mode (no caret) hides all tokens regardless of any trailing selection.
         if suppressed { return [] }
         var indices: Set<Int> = []

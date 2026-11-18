@@ -1019,6 +1019,11 @@ extension NativeTextViewCoordinator {
             }
         }
         guard let target = WikiLinkService.resolveIdentifier(link: link, textView: textView, at: charIndex) else {
+            // mlisb: the embedder may open the raw target itself.
+            if let onOpenLink, let raw = rawLinkTarget(textView, at: charIndex), onOpenLink(raw) {
+                (textView as? NativeTextView)?.linkClickDidNavigate = true
+                return true
+            }
             // Web link (URL-valued): returning false lets AppKit open the URL
             // (the mouseDown fallback mirrors that). Opening a link is navigation
             // too — flag it so mouseDown restores the pre-click caret.
@@ -1032,6 +1037,23 @@ extension NativeTextViewCoordinator {
             self.onLinkClick?(target)
         }
         return true
+    }
+
+    /// mlisb: a markdown link's `(target)` as written, or the text of a bare autolinked URL.
+    private func rawLinkTarget(_ textView: NSTextView, at charIndex: Int) -> String? {
+        let ns = textView.string as NSString
+        if let token = parsedDocument(for: textView.string).tokens.first(where: {
+            $0.kind == .link && $0.markerRanges.count == 4 && NSLocationInRange(charIndex, $0.range)
+        }) {
+            let start = NSMaxRange(token.markerRanges[2])
+            let end = token.markerRanges[3].location
+            return end > start ? ns.substring(with: NSRange(location: start, length: end - start)) : nil
+        }
+        guard let storage = textView.textStorage else { return nil }
+        var run = NSRange(location: NSNotFound, length: 0)
+        guard storage.attribute(.link, at: charIndex, longestEffectiveRange: &run,
+                                in: NSRange(location: 0, length: storage.length)) != nil else { return nil }
+        return ns.substring(with: run)
     }
 
     /// Horizontal fraction (0 = leading, 1 = trailing) of the current click through the glyph at

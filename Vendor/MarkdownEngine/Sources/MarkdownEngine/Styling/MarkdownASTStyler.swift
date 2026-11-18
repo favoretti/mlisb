@@ -194,7 +194,7 @@ enum MarkdownASTStyler {
             guard last == 0x0A || last == 0x0D else { break }
             hr.length -= 1
         }
-        guard hr.length > 0,
+        guard hr.length > 0, !ctx.config.revealAllSyntax,  // mlisb
               !(NSLocationInRange(ctx.caret, hr) || ctx.caret == NSMaxRange(hr)) else { return }
         var tags: [NSAttributedString.Key: Any] = [
             .foregroundColor: NSColor.clear,
@@ -394,7 +394,8 @@ enum MarkdownASTStyler {
             let syntax = NSRange(location: item.marker.location, length: NSMaxRange(box) - item.marker.location)
             // Caret edit OR a selection sweeping the syntax reveals the raw
             // `- [ ]` — matching how token-based elements reveal on selection.
-            return NSLocationInRange(ctx.caret, syntax) || ctx.caret == NSMaxRange(box)
+            return ctx.config.revealAllSyntax  // mlisb
+                || NSLocationInRange(ctx.caret, syntax) || ctx.caret == NSMaxRange(box)
                 || ctx.selectionIntersects(syntax)
         }()
         // Hidden task item shares the bullet geometry: `[ ] ` collapses to ~zero
@@ -422,6 +423,7 @@ enum MarkdownASTStyler {
         // highlight, which is sized to the same kerned slot.
         let orderedOverlayActive = item.ordered && item.checkbox == nil && item.number != nil
             && displayNumber != nil && displayNumber != item.number
+            && !ctx.config.revealAllSyntax  // mlisb: source mode shows the authored digit
         // Keep the source punctuation (`.` or `)`) when overlaying, so a paren list stays a paren list.
         let orderedPunct = orderedOverlayActive && item.marker.length > 0
             ? ctx.ns.substring(with: NSRange(location: NSMaxRange(item.marker) - 1, length: 1)) : "."
@@ -492,7 +494,7 @@ enum MarkdownASTStyler {
         } else if !item.ordered {
             let syntax = NSRange(location: item.marker.location,
                                  length: item.contentRange.location - item.marker.location)
-            if NSLocationInRange(ctx.caret, syntax) { return }
+            if NSLocationInRange(ctx.caret, syntax) || ctx.config.revealAllSyntax { return }  // mlisb
             attrs.append((item.marker, [.bulletMarker: true, .foregroundColor: NSColor.clear]))
         } else if orderedOverlayActive, let displayNumber {
             // Hide the ENTIRE source marker (digits + dot) as one unit and paint
@@ -525,6 +527,33 @@ enum MarkdownASTStyler {
                 markerAttrs[.kern] = (displayW - hiddenW) / CGFloat(max(1, item.marker.length))
             }
             attrs.append((item.marker, markerAttrs))
+        }
+    }
+
+    /// mlisb: a paragraph glued to a list item's line is that item's hard-wrapped continuation.
+    /// It takes the item's text indent for every line; the source indentation collapses so it adds none.
+    private static func styleListContinuation(range: NSRange, ctx: Ctx, into attrs: inout [StyledRange]) {
+        guard range.location > 0 else { return }
+        let prev = ctx.ns.lineRange(for: NSRange(location: range.location - 1, length: 0))
+        guard BlockParser.isListItem(ctx.ns.substring(with: prev)) else { return }
+        // Scoped restyles don't carry the list block, so the item is re-read from the text.
+        let blocks = DocumentAST.parse(ctx.text, scopedRanges: [prev], registry: ctx.config.extensionRegistry)
+        var found: ListItem?
+        for case .list(_, let items) in blocks { found = items.last { NSIntersectionRange($0.range, prev).length > 0 } }
+        guard let item = found else { return }
+        var itemAttrs: [StyledRange] = []
+        styleListItem(item, displayNumber: ctx.orderedDisplayNumbers[item.marker.location], ctx: ctx, into: &itemAttrs)
+        guard let itemStyle = itemAttrs.lazy.compactMap({ $0.attributes[.paragraphStyle] as? NSParagraphStyle }).first,
+              let ps = itemStyle.mutableCopy() as? NSMutableParagraphStyle else { return }
+        ps.firstLineHeadIndent = ps.headIndent
+        attrs.append((range, [.paragraphStyle: ps]))
+        var lineStart = range.location
+        while lineStart < NSMaxRange(range) {
+            let line = ctx.ns.lineRange(for: NSRange(location: lineStart, length: 0))
+            var n = 0
+            while line.location + n < NSMaxRange(line), [0x20, 0x09].contains(ctx.ns.character(at: line.location + n)) { n += 1 }
+            if n > 0 { attrs.append((NSRange(location: line.location, length: n), [.font: ctx.inlineMarkerFont])) }
+            lineStart = NSMaxRange(line)
         }
     }
 
@@ -641,6 +670,7 @@ enum MarkdownASTStyler {
 
         /// Active (syntax revealed) when the caret is inside the range or at its end (minus a newline).
         func isActive(_ range: NSRange) -> Bool {
+            if config.revealAllSyntax { return true }  // mlisb
             if NSLocationInRange(caret, range) { return true }
             guard range.length > 0, caret == NSMaxRange(range) else { return false }
             let last = ns.character(at: caret - 1)
@@ -662,7 +692,8 @@ enum MarkdownASTStyler {
 
     private static func styleBlock(_ block: BlockNode, font: NSFont, ctx: Ctx, into attrs: inout [StyledRange]) {
         switch block {
-        case .paragraph(_, let inlines):
+        case .paragraph(let range, let inlines):
+            styleListContinuation(range: range, ctx: ctx, into: &attrs)  // mlisb
             styleInlines(inlines, font: font, ctx: ctx, into: &attrs)
 
         case .heading(let level, let range, let markers, let inlines):

@@ -75,6 +75,11 @@ public struct MarkdownEditorConfiguration: Sendable {
     /// Runtime-switchable; a flip rebuilds immediately and drops the document's
     /// undo stack (actions from the other mode would replay at stale ranges).
     public var rawSourceMode: Bool
+    // mlisb: styled source mode.
+    /// Treat every construct as if the caret were inside it: all syntax, table,
+    /// LaTeX, image and diagram source is visible, while text keeps its styling.
+    /// Runtime-switchable; a flip restyles in place (no rebuild, undo kept).
+    public var revealAllSyntax: Bool
     /// Opt-in constructs beyond pure markdown (e.g. `==highlight==`). Empty by
     /// default: unregistered syntax stays literal text. Order defines match
     /// precedence among extensions; built-in constructs always win first.
@@ -125,7 +130,8 @@ public struct MarkdownEditorConfiguration: Sendable {
         extensions: [any MarkdownExtension] = [],
         cursorFollowsSpanInk: Bool = false,
         directives: [any MarkdownDirective] = [],
-        directiveSettings: DirectiveRegistrySettings = .default
+        directiveSettings: DirectiveRegistrySettings = .default,
+        revealAllSyntax: Bool = false
     ) {
         self.theme = theme
         self.services = services
@@ -156,6 +162,7 @@ public struct MarkdownEditorConfiguration: Sendable {
         self.cursorFollowsSpanInk = cursorFollowsSpanInk
         self.directives = directives
         self.directiveSettings = directiveSettings
+        self.revealAllSyntax = revealAllSyntax
     }
 
     public static let `default` = MarkdownEditorConfiguration()
@@ -316,6 +323,9 @@ public struct ListStyle: Sendable {
     /// auto-indent, marker conversion). When `false`, lists are still
     /// rendered, but typing-time conveniences are skipped.
     public var helpersEnabled: Bool
+    // mlisb: `->` becomes `→` unless disabled.
+    /// Rewrite a typed `->` into `→`. Off keeps the file content as typed.
+    public var arrowReplacementEnabled: Bool
     /// Master switch for auto-closing pairs `()`, `{}`, `[]` while typing.
     public var autoClosePairsEnabled: Bool
     /// Indent (in points) that one nesting level adds to the list item.
@@ -327,12 +337,14 @@ public struct ListStyle: Sendable {
 
     public init(
         helpersEnabled: Bool = true,
+        arrowReplacementEnabled: Bool = true,
         autoClosePairsEnabled: Bool = true,
         indentPerLevel: CGFloat = 27.5,
         maximumNestingLevel: Int = 3,
         extraLineHeight: CGFloat = 2
     ) {
         self.helpersEnabled = helpersEnabled
+        self.arrowReplacementEnabled = arrowReplacementEnabled
         self.autoClosePairsEnabled = autoClosePairsEnabled
         self.indentPerLevel = indentPerLevel
         self.maximumNestingLevel = maximumNestingLevel

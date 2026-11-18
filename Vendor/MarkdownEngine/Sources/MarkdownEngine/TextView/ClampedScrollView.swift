@@ -35,6 +35,13 @@ final class ClampedScrollView: NSScrollView {
         verticalScrollElasticity = .none
     }
 
+    // mlisb: always the thin overlay scroller, never the legacy one with a track
+    // (AppKit switches to legacy when a mouse is connected).
+    override var scrollerStyle: NSScroller.Style {
+        get { .overlay }
+        set { super.scrollerStyle = .overlay }
+    }
+
     /// AppKit can process a physical window resize inside a nested tracking
     /// loop without servicing deferred run-loop blocks. Keep explicit state so
     /// width-dependent rendering can finish before each frame-size callback

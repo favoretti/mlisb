@@ -1,0 +1,11 @@
+.ref/
+.build/
+node_modules/
+DerivedData/
+*.xcodeproj
+.DS_Store
+xcuserdata/
+app/Info.plist
+app/mlisb.entitlements
+Kit/Sources/MlisbKit/Resources/render/
+notes/

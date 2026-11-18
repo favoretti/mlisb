@@ -332,6 +332,22 @@ public struct MarkdownEditorBus: Sendable {
 
 // MARK: - Services Container
 
+// mlisb: fenced blocks (```mermaid, ```d2) drawn as images.
+/// Supplies an image for a fenced code block. Synchronous like every engine
+/// service: return nil while a render is pending and bump ``fingerprint()``
+/// when it lands, so the editor restyles.
+public protocol DiagramRenderer: Sendable {
+    /// `nil` leaves the block as ordinary code (other language, not ready, failed).
+    func image(language: String, source: String) -> NSImage?
+    func fingerprint() -> AnyHashable
+}
+
+public struct NoOpDiagramRenderer: DiagramRenderer {
+    public init() {}
+    public func image(language: String, source: String) -> NSImage? { nil }
+    public func fingerprint() -> AnyHashable { 0 }
+}
+
 /// Bundles every external service the engine needs.
 ///
 /// Held by ``MarkdownEditorConfiguration/services``. The engine reads its
@@ -342,6 +358,7 @@ public struct MarkdownEditorServices: Sendable {
     public var images: any EmbeddedImageProvider
     public var syntaxHighlighter: any SyntaxHighlighter
     public var latex: any LatexRenderer
+    public var diagrams: any DiagramRenderer
     public var bus: MarkdownEditorBus
 
     public init(
@@ -349,12 +366,14 @@ public struct MarkdownEditorServices: Sendable {
         images: any EmbeddedImageProvider = NoOpEmbeddedImageProvider(),
         syntaxHighlighter: any SyntaxHighlighter = PlainTextSyntaxHighlighter(),
         latex: any LatexRenderer = NoOpLatexRenderer(),
+        diagrams: any DiagramRenderer = NoOpDiagramRenderer(),
         bus: MarkdownEditorBus = .default
     ) {
         self.wikiLinks = wikiLinks
         self.images = images
         self.syntaxHighlighter = syntaxHighlighter
         self.latex = latex
+        self.diagrams = diagrams
         self.bus = bus
     }
 

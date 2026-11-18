@@ -61,7 +61,11 @@ extension NativeTextViewCoordinator {
         // inside the rebuild, after the transfer below has reset it, so the
         // selection handler stays suppressed: no link preview, no snap-back. The
         // styling is told now, so the caret's own token is revealed for it.
-        let restoredSelection = selectionToRestore.flatMap { NSMaxRange($0) <= nsDisplay.length ? $0 : nil }
+        // mlisb: clamped to the new length (an external replace may shorten the text).
+        let restoredSelection = selectionToRestore.map { sel -> NSRange in
+            let loc = min(sel.location, nsDisplay.length)
+            return NSRange(location: loc, length: min(sel.length, nsDisplay.length - loc))
+        }
         // Fresh document baseline: drop the incremental parse state and reseed
         // the backtick census (a stale count from the previous document would
         // force a spurious full-document restyle on the first keystroke).
@@ -368,13 +372,15 @@ extension NativeTextViewCoordinator {
     /// three times per keystroke on identical inputs (pre-edit ask,
     /// selection change, textDidChange).
     func activeTokenIndices(parsed: ParsedDocument, selection: NSRange, in text: NSString, suppressed: Bool) -> Set<Int> {
-        if let memo = activeTokenMemo, memo.version == parsed.version,
+        // mlisb: the memo key has no revealAllSyntax; skip it in that mode.
+        if !configuration.revealAllSyntax, let memo = activeTokenMemo, memo.version == parsed.version,
            memo.selection == selection, memo.suppressed == suppressed {
             return memo.result
         }
         let result = MarkdownDetection.computeActiveTokenIndices(
-            selectionRange: selection, tokens: parsed.tokens, in: text, suppressed: suppressed)
-        activeTokenMemo = (parsed.version, selection, suppressed, result)
+            selectionRange: selection, tokens: parsed.tokens, in: text, suppressed: suppressed,
+            revealAll: configuration.revealAllSyntax)
+        if !configuration.revealAllSyntax { activeTokenMemo = (parsed.version, selection, suppressed, result) }
         return result
     }
 

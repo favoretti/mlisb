@@ -1,0 +1,77 @@
+name: mlisb
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    CODE_SIGN_IDENTITY: "-"
+packages:
+  MarkdownEngine:
+    path: ../Vendor/MarkdownEngine
+  MlisbKit:
+    path: ../Kit
+targets:
+  mlisb:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+      - Assets.xcassets
+      - path: ../bin/mlisb
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: bin
+    dependencies:
+      - package: MarkdownEngine
+        product: MarkdownEngine
+      - package: MarkdownEngine
+        product: MarkdownEngineCodeBlocks
+      - package: MlisbKit
+    scheme:
+      testTargets: [mlisbTests]
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: mlisb
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.productivity
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Markdown
+            CFBundleTypeRole: Editor
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [net.daringfireball.markdown]
+          - CFBundleTypeName: Folder
+            CFBundleTypeRole: Editor
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.folder]
+    entitlements:
+      path: mlisb.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.security.files.bookmarks.app-scope: true
+        # WebKit's helper processes die without this, even for local content.
+        com.apple.security.network.client: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.favoretti.mlisb
+        ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  mlisbTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [Tests]
+    dependencies:
+      - target: mlisb
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: net.favoretti.mlisb.tests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/mlisb.app/Contents/MacOS/mlisb
+        BUNDLE_LOADER: $(TEST_HOST)

@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'">
+<style>
+  html, body { margin: 0; background: transparent; font-family: -apple-system, system-ui, sans-serif; }
+  #stage { position: absolute; left: 0; top: 0; }
+  #stage > svg { display: block; }
+</style>
+<div id="stage"></div>
+<script src="wasm_exec.js"></script>
+<script type="module" src="main.js"></script>
