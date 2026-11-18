@@ -41,9 +41,6 @@ document. It runs in the App Sandbox and needs macOS 14 or later.
 
 ## Install
 
-> **No release yet.** The first one is being prepared. Until it is out,
-> [build from source](docs/DEVELOPMENT.md).
-
 ```sh
 brew install --cask favoretti/tap/mlisb
 ```

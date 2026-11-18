@@ -119,8 +119,8 @@ Working:
 
 Not done or not verified:
 - Finder thumbnails are built but the system did not pick them up in a development build.
-- The updater has never installed a real update; signing with a Developer ID, notarization and
-  the release workflow have not been run.
+- The updater has never installed a real update; that needs a second release. Version 0.1.0 was
+  signed, notarized and published by the release workflow.
 - Remote images, a formatting bar over the selection, underline, image drop into `./assets/`.
 - See "Known differences from github.com" above.
 
