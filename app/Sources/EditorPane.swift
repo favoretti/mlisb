@@ -46,6 +46,9 @@ struct EditorPane: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in
             document.save()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+            document.save()
+        }
     }
 
     private static let latex = SwiftMathBridge()

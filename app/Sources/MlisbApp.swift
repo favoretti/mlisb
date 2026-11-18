@@ -14,6 +14,8 @@ struct MlisbApp: App {
     @StateObject private var updater = UpdaterModel()
 #endif
 
+    init() { Session.apply() }
+
     var body: some Scene {
         // The window's value is its workspace root: a folder or a single file.
         WindowGroup(for: URL.self) { $root in

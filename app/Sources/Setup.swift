@@ -35,3 +35,18 @@ enum CommandLineTool {
     }
     return url
 }
+
+/// Reopening last time's windows. macOS drops them when "Close windows when quitting an application"
+/// is on, which is its default; an editor is expected to come back as it was left, so the app decides.
+enum Session {
+    static var reopensWindows: Bool {
+        get { UserDefaults.standard.object(forKey: "reopenWindows") == nil || UserDefaults.standard.bool(forKey: "reopenWindows") }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "reopenWindows")
+            apply()
+        }
+    }
+
+    /// AppKit reads this key, from the app's own settings first, when it decides whether to keep the windows.
+    static func apply() { UserDefaults.standard.set(reopensWindows, forKey: "NSQuitAlwaysKeepsWindows") }
+}

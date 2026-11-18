@@ -6,9 +6,14 @@ struct SettingsView: View {
 #endif
     @AppStorage("textSize") private var textSize = ReadingSettings.defaultSize
     @AppStorage("lineWidth") private var lineWidth = LineWidth.medium
+    @State private var reopensWindows = Session.reopensWindows
 
     var body: some View {
         Form {
+            Section("General") {
+                Toggle("Reopen windows from last time", isOn: $reopensWindows)
+                    .onChange(of: reopensWindows) { Session.reopensWindows = reopensWindows }
+            }
             Section("Reading") {
                 LabeledContent("Text size") {
                     Stepper("\(ReadingSettings.clamp(textSize)) pt",
