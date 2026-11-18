@@ -1,140 +1,163 @@
+<div align="center">
+
+<img src="app/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="mlisb icon: raw Markdown on the dark half, the rendered page on the light half">
+
 # mlisb
 
-Markdown Like It Should Be. A native macOS app for viewing and quickly editing Markdown.
+**Markdown Like It Should Be.**
 
-## What it is
+A native macOS viewer and quick editor for the Markdown files that fill every repository.<br>
+Mermaid and D2 diagrams, math and highlighted code render in place.
 
-mlisb is aimed at AI-assisted development, where repositories are full of `.md` files. It is built with SwiftUI and AppKit, using a TextKit 2 editor. The App Sandbox is on. It requires macOS 14 or later. Bundle id: `net.favoretti.mlisb`.
+<a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1E1B2E?style=flat"></a>
+<a href="https://github.com/favoretti/mlisb/releases"><img alt="latest release" src="https://img.shields.io/github/v/release/favoretti/mlisb?style=flat&color=1E1B2E"></a>
+<img alt="macOS 14 or later" src="https://img.shields.io/badge/macOS-14%2B-1E1B2E?style=flat">
 
-## Features
+<p>
+<a href="#install">Install</a> ·
+<a href="#diagrams-math-and-code-in-place">Diagrams</a> ·
+<a href="#see-what-your-agent-changed">Change review</a> ·
+<a href="#jump-anywhere">Navigation</a> ·
+<a href="#from-the-terminal">Terminal</a> ·
+<a href="docs/DEVELOPMENT.md">Build from source</a>
+</p>
 
-- Live editing. Markdown syntax is hidden except where the cursor is. A source mode shows all syntax.
-- `mermaid` and `d2` code blocks render as diagrams in place. Source shows when the cursor enters the block. A failed render shows the error.
-- Math: `$…$` and `$$…$$` render in place; a formula that fails to parse stays as source.
-- Settings (⌘,) set the text size (12 to 24 pt) and line width; View → Bigger, Smaller and Actual Size (⌘+, ⌘-, ⌘0) change the size.
-- Markdown extensions: `md`, `markdown`, `mdown`, `mkd`, `mdx`, `qmd`, `rmd`, `mdc`.
-- The file's text is saved back unchanged, except where you typed.
-- Autosave 1 second after typing stops. Silent reload when the file changes on disk. If both changed, a "Keep Mine / Load Theirs" banner appears.
-- Folder sidebar: new file or folder, rename, drag to move, move to Trash, reveal in Finder, and Quick Look preview for images and PDFs.
-- Table of contents, find, and a Format menu.
-- Find in Folder (⇧⌘F) searches every Markdown file in the sidebar. Open Quickly (⇧⌘O) jumps to a file, a heading or any menu command. The inspector's Problems tab (⇧⌘M) lists broken links, anchors, tables and fences.
-- Links to other Markdown files open in the app. `#anchor` links jump to the heading.
-- Local images, and Open Recent.
-- Export to HTML, PDF, JPEG and ePub. Copy as plain text, rich text, Markdown or HTML.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/hero-dark.webp">
+  <img src="docs/screenshots/hero-light.webp" width="100%" alt="An mlisb window on a project folder: the file tree on the left, an architecture document in the middle with a rendered Mermaid flowchart, highlighted Swift code and a note, and the table of contents on the right">
+</picture>
 
-## Requirements
+</div>
 
-- Xcode (built with Xcode 27.2).
-- XcodeGen: `brew install xcodegen`.
-- Node and pnpm, only needed to build the diagram page.
+Coding agents write a lot of Markdown: plans, architecture notes, changelogs, READMEs. mlisb is for
+reading that output and fixing it on the spot.
 
-## Build and run
+A file opens rendered, the way GitHub would show it. Click into a line to edit it, and the syntax
+appears only where the cursor is. The file on disk stays plain Markdown. Bytes you did not touch are
+saved back exactly as they were, so `git diff` shows only your edits.
 
-1. `cd render && pnpm install && pnpm build` builds the mermaid and d2 page into `Kit/Sources/MlisbKit/Resources/render/`. That output is gitignored, so this step is required on a fresh clone.
-2. `cd app && xcodegen generate`
-3. `cd app && xcodebuild -project mlisb.xcodeproj -scheme mlisb -derivedDataPath .build/xcode build`. Or open `app/mlisb.xcodeproj` in Xcode and run. The app lands in `app/.build/xcode/Build/Products/Debug/mlisb.app`.
+It is a Mac app all the way down: native text editing, no Electron, no web view around your
+document. It runs in the App Sandbox and needs macOS 14 or later.
 
-Re-run `xcodegen generate` after adding or removing source files. Local builds are ad-hoc signed.
+## Install
 
-## Tests
-
-- App: `cd app && xcodebuild -project mlisb.xcodeproj -scheme mlisb -derivedDataPath .build/xcode test`. Runs inside the sandboxed app. Launcher: `sh bin/test-mlisb.sh`.
-- Kit: `cd Kit && swift test`. Covers diagram rendering, export.
-- Engine: `cd Vendor/MarkdownEngine && swift test`. One upstream test, `MarkdownHTMLRendererTests` ("bare URLs and emails autolink"), fails on macOS 27. It is unrelated to our changes.
-
-## Command-line tool
-
-- `mlisb file.md`, `mlisb docs/`, `mlisb .`: open a file or folder.
-- `mlisb notes.md:42` or `mlisb --line 42 notes.md`: open the file with the caret at the start of line 42. A line past the end goes to the last line. A file that really has a colon in its name opens as that file.
-- `mlisb new.md`: creates the file if missing.
-- `some-command | mlisb -`: opens piped text as a temporary file.
-- `mlisb --help`: lists these forms.
-
-#### Coding agent hook
-
-`mlisb notify` reads one JSON object on stdin (a Claude Code `PostToolUse` payload), and if `tool_input.file_path` (or `tool_input.path`, or `tool_response.filePath`) is an existing `.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`, `.qmd`, `.rmd` or `.mdc` file, opens it in mlisb without taking focus. It prints nothing and always exits 0, so it never slows or fails the agent's turn.
-
-`mlisb hook install` adds a `PostToolUse` hook (matcher `Write|Edit|MultiEdit`) running `<path to mlisb> notify` to `~/.claude/settings.json`. `mlisb hook uninstall` removes it. Both take `--settings PATH`. Other settings are kept, a copy of the old file is saved as `settings.json.mlisb-backup`, and a file that is not valid JSON is refused and left alone.
-
-Line requests use a private `mlisb://line?file=<path>&line=<n>` URL. The script opens the file first, which gives the app access to it, then sends this URL to the window showing the file.
-
-The tool is a small shell script inside the app bundle. It calls `open`, which gives the sandboxed app access to the paths.
-
-To install, choose **mlisb → Install Command Line Tool…**. The menu shows the command to copy:
+> **No release yet.** The first one is being prepared. Until it is out,
+> [build from source](docs/DEVELOPMENT.md).
 
 ```sh
-sudo mkdir -p /usr/local/bin && sudo ln -sf '<path to mlisb.app>/Contents/Resources/bin/mlisb' /usr/local/bin/mlisb
+brew install --cask favoretti/tap/mlisb
 ```
 
-## Updates
+Or download the latest `mlisb-x.y.z.zip` from the
+[releases page](https://github.com/favoretti/mlisb/releases), unzip it and move `mlisb.app` to
+Applications. The app keeps itself up to date after that.
 
-mlisb updates itself with [Sparkle](https://sparkle-project.org) 2.10.0 (pinned exactly). The feed is `https://github.com/favoretti/mlisb/releases/latest/download/appcast.xml`. Updates are verified with the EdDSA public key in `SUPublicEDKey`. The updater only starts when the bundle has both `SUFeedURL` and `SUPublicEDKey`. Controls: **mlisb → Check for Updates…** and **Settings (⌘,) → Updates**.
+## Diagrams, math and code, in place
 
-The app is sandboxed, so `project.yml` adds what Sparkle's [sandboxing guide](https://sparkle-project.org/documentation/sandboxing/) requires: `SUEnableInstallerLauncherService` in Info.plist, and the `com.apple.security.temporary-exception.mach-lookup.global-name` entitlement with `$(PRODUCT_BUNDLE_IDENTIFIER)-spks` and `-spki`. The downloader service stays off because the app has `com.apple.security.network.client`.
+A `mermaid` or `d2` code block draws as a diagram right in the text. `$…$` and `$$…$$` render as
+math, and code blocks are highlighted. There is nothing to install and nothing leaves your Mac: no
+`d2` binary, no Node, no online renderer.
 
-Release builds must sign these inside `Sparkle.framework`, each with Hardened Runtime (`-o runtime`), in this order, and never with `--deep`:
+Put the cursor in a diagram to edit its source; move out and it redraws. If the source has a
+mistake, the renderer's error shows in place of the diagram. ⌘/ switches the whole document between
+rendered and source.
 
-1. `Versions/B/XPCServices/Installer.xpc`
-2. `Versions/B/XPCServices/Downloader.xpc`, with `--preserve-metadata=entitlements`. Or delete it, since it is unused here.
-3. `Versions/B/Autoupdate`
-4. `Versions/B/Updater.app`
-5. `Sparkle.framework` itself
+| Rendered | Source (⌘/) |
+| --- | --- |
+| <img src="docs/screenshots/diagrams.webp" alt="A document with a D2 diagram of a checkout flow, a rendered formula and a highlighted SQL query"> | <img src="docs/screenshots/source.webp" alt="The same document in source mode: heading markers, the d2 block's text, the formula between dollar signs and the sql fence are all visible"> |
 
-Then sign the app. Xcode's Archive and Export does all of this by itself.
+## See what your agent changed
 
-Mac App Store variant (the store forbids self-updating): in `app/project.yml` drop the `Sparkle:` entry under `packages`, the `- package: Sparkle` dependency, the four `SU…` Info.plist keys, and the `mach-lookup.global-name` entitlement with its two entries. Then run `xcodegen generate`. All updater code is wrapped in `#if canImport(Sparkle)`, so it compiles away, along with the Settings window and the menu item.
+When a file changes on disk while it is open, mlisb reloads it without asking and marks what is
+different since you last looked: added lines in green, rewritten lines in amber with the changed
+words highlighted, and a marker where lines were removed. Step through the changes with ⌥⌘↓ and
+⌥⌘↑, then press **Mark Reviewed** (⌥⌘R).
 
-## Releasing
+<img src="docs/screenshots/review.webp" width="100%" alt="A rollout plan after an agent edited it: one task newly checked off, a sentence with its changed words highlighted, a whole new Rollback section marked in green, and a bar at the bottom reading 2 added, 2 changed, 1 removed with a Mark Reviewed button">
 
-`scripts/build-app.sh` builds a universal `dist/mlisb.app` and zips it. With no settings it signs
-ad-hoc, which is enough to check the build:
+- **Nothing is overwritten.** If you were typing when the file changed, a banner lets you keep your
+  version or load the new one.
+- **Local history.** mlisb keeps earlier versions of each file for 30 days. Compare with any of
+  them, or restore one (⌃⌘H).
+- **Follows the agent.** `mlisb hook install` connects it to Claude Code: every Markdown file the
+  agent writes opens in mlisb, without taking focus from your terminal.
 
+## Jump anywhere
+
+**Open Quickly** (⇧⌘O) finds a file in the folder, a heading in the document or any menu command.
+**Find in Folder** (⇧⌘F) searches every Markdown file in the sidebar.
+
+<img src="docs/screenshots/palette.webp" width="100%" alt="The Open Quickly panel over a document, listing the folder's Markdown files followed by the headings of the open document">
+
+The inspector shows the table of contents (⇧⌘T) and a **Problems** list (⇧⌘M): broken links,
+anchors that point nowhere, malformed tables and code fences that never close.
+
+## From the terminal
+
+```sh
+mlisb .                  # open the current folder
+mlisb docs/plan.md:42    # open a file at line 42
+mlisb notes.md           # creates the file if it does not exist
+pbpaste | mlisb -        # read piped text
+mlisb hook install       # open every Markdown file Claude Code writes
 ```
-VERSION=0.1.0 scripts/build-app.sh
-```
 
-Set `SIGN_IDENTITY` to a Developer ID identity to sign for distribution, and `NOTARY_PROFILE` to a
-`notarytool` keychain profile to notarize and staple.
+The Homebrew cask installs the `mlisb` command. Otherwise choose **mlisb → Install Command Line
+Tool…** and run the one line it shows. `mlisb hook install` adds one hook to
+`~/.claude/settings.json` and keeps a backup of the old file; `mlisb hook uninstall` removes it.
 
-Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: it builds, signs and notarizes, runs
-the tests, generates the update feed (`appcast.xml`), publishes a GitHub release and updates the
-Homebrew cask. The workflow needs these repository secrets: `DEVELOPER_ID_P12`,
-`DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `SPARKLE_ED_KEY`,
-`TAP_DEPLOY_KEY`.
+## Also in the box
 
-The app looks for updates at this repository's latest release, so releases must be publicly
-downloadable for updates to work.
+- **Folder sidebar.** New file or folder, rename, drag to move, Move to Trash, Reveal in Finder, and
+  a Quick Look preview for images and PDFs.
+- **GitHub Flavored Markdown.** Tables, task lists, alerts, footnotes, front matter, reference
+  links, strikethrough, autolinks and a safe subset of HTML.
+- **Saves by itself**, one second after you stop typing, in place.
+- **Export** to HTML, PDF, JPEG and ePub. **Copy as** plain text, rich text, Markdown or HTML.
+- **Quick Look.** Press Space on a Markdown file in Finder for a rendered preview.
+- **Careful with links.** A link to another Markdown file opens in the app. Anything that would
+  leave the app asks first.
+- **Settings** for text size and line width.
+- **File types:** `md`, `markdown`, `mdown`, `mkd`, `mdx`, `qmd`, `rmd`, `mdc`.
 
 ## Keyboard shortcuts
 
 | Shortcut | Action |
 | --- | --- |
-| ⌘O | Open |
-| ⌘, | Settings |
+| ⌘O | Open a file or folder |
+| ⇧⌘O | Open Quickly |
+| ⇧⌘F | Find in Folder |
+| ⌘F | Find in the document |
 | ⌘/ | Source mode |
 | ⇧⌘T | Table of contents |
-| ⌘F | Find |
-| ⌘B | Bold |
-| ⌘I | Italic |
-| ⇧⌘X | Strikethrough |
-| ⌘E | Inline code |
-| ⌘K | Link |
+| ⇧⌘M | Problems |
+| ⌥⌘↓ / ⌥⌘↑ | Next / previous change |
+| ⌥⌘R | Mark Reviewed |
+| ⌃⌘H | Version history |
+| ⌘B / ⌘I / ⇧⌘X | Bold / italic / strikethrough |
+| ⌘E / ⌘K | Inline code / link |
 | ⌘1 / ⌘2 / ⌘3 | Heading level 1 / 2 / 3 |
+| ⌘+ / ⌘- / ⌘0 | Bigger / smaller / actual size |
+| ⌘, | Settings |
 
-## Repository layout
+## Where it differs from GitHub
 
-- `app/`: SwiftUI app (XcodeGen `project.yml`, `Sources/`, `Tests/`).
-- `Kit/`: Swift package MlisbKit (diagram RenderService, Exporter).
-- `render/`: web source for the diagram page (mermaid and d2 WASM, bundled with esbuild).
-- `Vendor/MarkdownEngine/`: our fork of nodes-app/swift-markdown-engine 0.16.0. Changes are listed in its `PATCHES.md`.
-- `bin/mlisb`: the command-line script.
-- `PLAN.md`: the plan and status.
+GitHub is the reference for how a document should look. These are the known differences:
 
-## Known limits
+- An opening code fence with no closing fence stays ordinary text, so typing a fence does not turn
+  the rest of the document into code.
+- `<br>` outside a table shows as a dimmed tag, and `<details>` is always expanded.
+- A reference-style image (`![alt][label]`) shows as a link. Remote images are not loaded.
+- Footnote definitions do not span continuation lines, and a code block inside a list item is drawn
+  flush left.
+- Indented (four-space) code blocks, and HTML outside the safe subset, show as plain text.
+- A diagram is fitted to the window width when it is drawn. It does not refit while the window is
+  being resized.
 
-- The editor does not render these. They show as plain text, and the file is never altered: setext headings, front matter, footnotes, reference-style links, raw HTML, `~~~` fences, and tables without outer pipes.
-- Remote (http) images are not loaded. There is no underline command, no formatting bar over the selection, and no math yet.
-- A diagram is fitted to the window width when it is drawn. It does not refit while the window is being resized.
+## Development
+
+Building, testing and releasing are described in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The plan
+and current status are in [PLAN.md](PLAN.md).
 
 ## Licenses
 
