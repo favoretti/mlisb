@@ -36,7 +36,14 @@ struct WorkspaceView: View {
             guard let root else { return }
             Access.shared.begin(root)
             if FS.isDir(root) { folder = FolderModel(root: root) } else { document = Document(url: root) }
+            showRequestedFile()
         }
+        .onChange(of: LineRequests.shared.pending) { showRequestedFile() }
+    }
+
+    /// A folder window selects the file a line request names; the editor then takes the request.
+    private func showRequestedFile() {
+        if let file = LineRequests.shared.pending?.file { _ = folder?.show(file) }
     }
 
     private func open(_ url: URL) {

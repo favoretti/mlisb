@@ -49,6 +49,9 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
+        CFBundleURLTypes:
+          - CFBundleURLName: net.favoretti.mlisb.cli
+            CFBundleURLSchemes: [mlisb]
         CFBundleDocumentTypes:
           - CFBundleTypeName: Markdown
             CFBundleTypeRole: Editor

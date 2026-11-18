@@ -36,6 +36,9 @@ struct EditorPane: View {
         .focusedSceneValue(\.document, document)
         .reviewUI(document)
         .onReceive(NotificationCenter.default.publisher(for: bus.name("showFind"))) { _ in showFind = true }
+        .onChange(of: LineRequests.shared.pending, initial: true) { _, request in
+            if let request, request.matches(document.url) { apply(request) }
+        }
         .onDisappear { document.save() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in
             document.save()
@@ -79,6 +82,32 @@ struct EditorPane: View {
         textView.window?.makeFirstResponder(textView)
         textView.setSelectedRange(NSRange(location: displayed[index].range.location, length: 0))
         textView.scrollRangeToVisible(displayed[index].range)
+    }
+
+    /// The editor's text view appears a moment after the pane, so wait for it.
+    private func apply(_ request: LineRequest) {
+        LineRequests.shared.pending = nil
+        Task {
+            for _ in 0..<40 {
+                // The window may not be key yet; the one showing this file's text is the target.
+                let textViews = NSApp.windows.compactMap { $0.contentView?.editorTextView() }
+                if let textView = textViews.first(where: { $0.string == document.text && !document.text.isEmpty })
+                    ?? NSApp.keyWindow?.contentView?.editorTextView(),
+                   !textView.string.isEmpty || document.text.isEmpty {
+                    let at = NSRange(location: LineRequest.offset(ofLine: request.line, in: textView.string), length: 0)
+                    textView.window?.makeFirstResponder(textView)
+                    textView.setSelectedRange(at)
+                    // The text is laid out lazily; lay it all out so the target has a position to scroll to.
+                    if let tlm = textView.textLayoutManager {
+                        tlm.ensureLayout(for: tlm.documentRange)
+                        if let loc = tlm.location(tlm.documentRange.location, offsetBy: at.location),
+                           let fragment = tlm.textLayoutFragment(for: loc) { textView.scrollToVisible(fragment.layoutFragmentFrame.insetBy(dx: 0, dy: -80)) }
+                    }
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        }
     }
 
     private func open(link: String) -> Bool {

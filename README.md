@@ -34,15 +34,25 @@ Re-run `xcodegen generate` after adding or removing source files. Local builds a
 
 ## Tests
 
-- App: `cd app && xcodebuild -project mlisb.xcodeproj -scheme mlisb -derivedDataPath .build/xcode test`. 18 tests, run inside the sandboxed app.
-- Kit: `cd Kit && swift test`. 16 tests (diagram rendering, export).
-- Engine: `cd Vendor/MarkdownEngine && swift test`. 690 tests. One upstream test, `MarkdownHTMLRendererTests` ("bare URLs and emails autolink"), fails on macOS 27. It is unrelated to our changes.
+- App: `cd app && xcodebuild -project mlisb.xcodeproj -scheme mlisb -derivedDataPath .build/xcode test`. Runs inside the sandboxed app. Launcher: `sh bin/test-mlisb.sh`.
+- Kit: `cd Kit && swift test`. Covers diagram rendering, export.
+- Engine: `cd Vendor/MarkdownEngine && swift test`. One upstream test, `MarkdownHTMLRendererTests` ("bare URLs and emails autolink"), fails on macOS 27. It is unrelated to our changes.
 
 ## Command-line tool
 
 - `mlisb file.md`, `mlisb docs/`, `mlisb .`: open a file or folder.
+- `mlisb notes.md:42` or `mlisb --line 42 notes.md`: open the file with the caret at the start of line 42. A line past the end goes to the last line. A file that really has a colon in its name opens as that file.
 - `mlisb new.md`: creates the file if missing.
 - `some-command | mlisb -`: opens piped text as a temporary file.
+- `mlisb --help`: lists these forms.
+
+#### Coding agent hook
+
+`mlisb notify` reads one JSON object on stdin (a Claude Code `PostToolUse` payload), and if `tool_input.file_path` (or `tool_input.path`, or `tool_response.filePath`) is an existing `.md`, `.markdown` or `.mdown` file, opens it in mlisb without taking focus. It prints nothing and always exits 0, so it never slows or fails the agent's turn.
+
+`mlisb hook install` adds a `PostToolUse` hook (matcher `Write|Edit|MultiEdit`) running `<path to mlisb> notify` to `~/.claude/settings.json`. `mlisb hook uninstall` removes it. Both take `--settings PATH`. Other settings are kept, a copy of the old file is saved as `settings.json.mlisb-backup`, and a file that is not valid JSON is refused and left alone.
+
+Line requests use a private `mlisb://line?file=<path>&line=<n>` URL. The script opens the file first, which gives the app access to it, then sends this URL to the window showing the file.
 
 The tool is a small shell script inside the app bundle. It calls `open`, which gives the sandboxed app access to the paths.
 

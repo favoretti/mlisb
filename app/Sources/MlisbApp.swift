@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 @main
 struct MlisbApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage("sourceMode") private var sourceMode = false
     @AppStorage("showOutline") private var showOutline = false
 

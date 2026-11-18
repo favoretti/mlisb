@@ -1,18 +1,145 @@
 #!/bin/sh
-# Opens files or folders in mlisb. "-" reads stdin; a missing markdown file is created.
+# Opens files or folders in mlisb. See --help.
 set -e
+bundle=${MLISB_BUNDLE_ID:-net.favoretti.mlisb}
+
+usage() {
+  cat <<'EOF'
+usage: mlisb [--line N] <file|folder>...   open files or folders (a missing .md file is created)
+       mlisb <file>:<N>                    open a file with the caret at line N
+       some-command | mlisb -              open piped text as a temporary file
+       mlisb notify                        agent post-write hook: read JSON on stdin, open a written .md in the background
+       mlisb hook install|uninstall [--settings PATH]
+                                           add or remove that hook in Claude Code's settings (default ~/.claude/settings.json)
+       mlisb --help
+EOF
+}
+
+# Absolute path without resolving symlinks, so the app sees the same string we opened.
+absolute() {
+  case $1 in /*) printf %s "$1" ;; *) printf %s "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")" ;; esac
+}
+
+# Percent-encodes every byte.
+encode() { printf %s "$1" | LC_ALL=C od -An -v -tx1 | tr -d ' \n' | sed 's/../%&/g'; }
+
+notify() {
+  json=$(cat)
+  for key in tool_input.file_path tool_input.path tool_response.filePath; do
+    f=$(printf %s "$json" | /usr/bin/plutil -extract "$key" raw -o - - 2>/dev/null) || continue
+    case $f in /*) [ -f "$f" ] && break ;; esac
+    f=
+  done
+  case $(printf %s "$f" | tr '[:upper:]' '[:lower:]') in
+    *.md|*.markdown|*.mdown) open -g -b "$bundle" "$f" ;;
+  esac
+}
+
+# JXA edit of the settings JSON. Args: file mode command output. Prints "ok", or "error: ..." on bad input.
+hook_js='
+ObjC.import("Foundation");
+function run(argv) {
+  var file = argv[0], install = argv[1] === "install", cmd = argv[2];
+  var fm = $.NSFileManager.defaultManager, settings = {};
+  if (fm.fileExistsAtPath(file)) {
+    var text = $.NSString.stringWithContentsOfFileEncodingError(file, $.NSUTF8StringEncoding, null);
+    try { settings = JSON.parse(ObjC.unwrap(text)); } catch (e) { return "error: not valid JSON"; }
+    if (settings === null || typeof settings !== "object" || Array.isArray(settings)) return "error: not a JSON object";
+  } else if (!install) return "none";
+  var hooks = settings.hooks;
+  if (hooks !== undefined && (hooks === null || typeof hooks !== "object" || Array.isArray(hooks))) return "error: \"hooks\" is not an object";
+  hooks = settings.hooks = hooks || {};
+  var list = hooks.PostToolUse;
+  if (list !== undefined && !Array.isArray(list)) return "error: \"hooks.PostToolUse\" is not an array";
+  list = list || [];
+  var ours = function (h) { return h && typeof h.command === "string" && /\/mlisb notify$/.test(h.command); };
+  var found = false;
+  list = list.filter(function (entry) {
+    if (!entry || !Array.isArray(entry.hooks)) return true;
+    var kept = entry.hooks.filter(function (h) { return !ours(h); });
+    if (kept.length === entry.hooks.length) return true;
+    found = true;
+    entry.hooks = kept;
+    return kept.length > 0;
+  });
+  if (install) list.push({ matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: cmd }] });
+  else if (!found) return "none";
+  if (list.length) hooks.PostToolUse = list; else delete hooks.PostToolUse;
+  if (!Object.keys(hooks).length) delete settings.hooks;
+  $(JSON.stringify(settings, null, 2) + "\n").writeToFileAtomicallyEncodingError(argv[3], true, $.NSUTF8StringEncoding, null);
+  return "ok";
+}'
+
+hook() {
+  mode=${1:-}
+  if [ $# -gt 0 ]; then shift; fi
+  settings=$HOME/.claude/settings.json
+  case $mode in install|uninstall) ;; *) usage >&2; exit 2 ;; esac
+  if [ "$1" = --settings ] && [ -n "$2" ]; then settings=$2; shift 2; fi
+  [ $# -eq 0 ] || { usage >&2; exit 2; }
+  self=$0
+  case $self in */*) ;; *) self=$(command -v "$self") ;; esac
+  cmd="$(absolute "$self") notify"
+  dir=$(dirname "$settings")
+  mkdir -p "$dir"
+  out=$(mktemp "$dir/.mlisb-settings-XXXXXX")
+  trap 'rm -f "$out"' EXIT
+  result=$(/usr/bin/osascript -l JavaScript -e "$hook_js" "$settings" "$mode" "$cmd" "$out" 2>&1) || true
+  case $result in
+    ok) ;;
+    none) echo "mlisb: no mlisb hook in $settings"; return 0 ;;
+    *) echo "mlisb: $settings: ${result#error: }; left untouched" >&2; exit 1 ;;
+  esac
+  if [ -e "$settings" ]; then
+    cp -p "$settings" "$settings.mlisb-backup"
+    chmod "$(stat -f %Lp "$settings")" "$out"
+  else
+    chmod 644 "$out"
+  fi
+  mv "$out" "$settings"
+  [ "$mode" = install ] && echo "mlisb: installed the hook in $settings" || echo "mlisb: removed the hook from $settings"
+}
+
+case $1 in
+  notify) notify >/dev/null 2>&1 || true; exit 0 ;;
+  hook) shift; hook "$@"; exit 0 ;;
+  -h|--help) usage; exit 0 ;;
+esac
+
 n=$#
+line=
+requests=
 while [ "$n" -gt 0 ]; do
   arg=$1; shift; n=$((n - 1))
   case "$arg" in
+    --line)
+      case $1 in ''|*[!0-9]*) usage >&2; exit 2 ;; esac
+      line=$1; shift; n=$((n - 1)); continue ;;
     -)
       arg=$(mktemp "${TMPDIR:-/tmp}/mlisb-XXXXXX")
       mv "$arg" "$arg.md"; arg="$arg.md"
       cat > "$arg" ;;
-    *.md|*.markdown|*.mdown)
-      [ -e "$arg" ] || : > "$arg" ;;
+    -*) usage >&2; exit 2 ;;
+    *)
+      # "name:42" is a line, unless a file with that exact name exists.
+      if [ ! -e "$arg" ]; then
+        case ${arg##*:} in ''|*[!0-9]*) ;; *) case $arg in *:*) line=${arg##*:}; arg=${arg%:*} ;; esac ;; esac
+      fi
+      case "$arg" in
+        *.md|*.markdown|*.mdown) [ -e "$arg" ] || : > "$arg" ;;
+      esac ;;
   esac
+  if [ -n "$line" ]; then
+    arg=$(absolute "$arg")
+    [ -f "$arg" ] && requests="$requests$arg	$line
+"
+    line=
+  fi
   set -- "$@" "$arg"
 done
 # Going through LaunchServices is what grants the sandboxed app access to these paths.
-exec open -b "${MLISB_BUNDLE_ID:-net.favoretti.mlisb}" "$@"
+open -b "$bundle" "$@"
+# The app gets the line once the file's window exists.
+printf %s "$requests" | while IFS='	' read -r file number; do
+  open -b "$bundle" "mlisb://line?file=$(encode "$file")&line=$number"
+done
