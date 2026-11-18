@@ -25,6 +25,7 @@ import Foundation
 /// The block-level classification of a run of lines.
 enum BlockKind: Equatable {
     case paragraph       // inline-bearing
+    case setextHeading   // mlisb: paragraph lines + a `===` / `---` underline line
     case heading         // single ATX line (`# …`), inline-bearing content
     case blockquote      // consecutive `>` lines, inline-bearing per line
     case list            // consecutive list-item lines (`-`/`*`/`+` or `1.`/`1)`)
@@ -147,6 +148,14 @@ enum BlockParser {
             steps += 1
             if steps > cap { return true }
         }
+        // mlisb: a `===` / `---` line (setext underline, front-matter fence) re-shapes blocks beyond its own line.
+        var ls = start
+        while ls < end {
+            var le = ls
+            while le < end, buf[le] != 0x0A, buf[le] != 0x0D { le += 1 }
+            if isRuleLine(buf, ls, le) { return true }
+            ls = le + 1
+        }
         var i = start
         while i < end {
             if buf[i] == 0x24 {                                          // $
@@ -239,7 +248,8 @@ enum BlockParser {
                 // suffix ALSO starts with a paragraph, the two would need to
                 // MERGE — a full parse never yields adjacent paragraphs. The
                 // splice can't merge across the cut, so fall back.
-                if winLast + 1 < oldBlocks.count, oldBlocks[winLast + 1].kind == .paragraph {
+                if winLast + 1 < oldBlocks.count, oldBlocks[winLast + 1].kind == .paragraph
+                    || winLast + 1 < oldBlocks.count && oldBlocks[winLast + 1].kind == .setextHeading {  // mlisb
                     return nil
                 }
             default: break
@@ -247,6 +257,8 @@ enum BlockParser {
         }
 
         // mlisb: a fence or blank line between two quotes / lists can go away; they must then merge across the cut.
+        if reparsed.first?.kind == .paragraph || reparsed.first?.kind == .setextHeading, winFirst > 0,
+           oldBlocks[winFirst - 1].kind == .paragraph { return nil }
         for kind in [BlockKind.blockquote, .list] {
             if reparsed.last?.kind == kind, winLast + 1 < oldBlocks.count, oldBlocks[winLast + 1].kind == kind { return nil }
             if reparsed.first?.kind == kind, winFirst > 0, oldBlocks[winFirst - 1].kind == kind { return nil }
@@ -389,8 +401,10 @@ enum BlockParser {
             } else {
                 // Paragraph: merge consecutive plain (non-blank, non-special) lines.
                 var end = i
+                var setext = false
                 while end + 1 < lines.count {
                     let next = lineText(end + 1)
+                    if isSetextUnderline(next) { end += 1; setext = true; break }   // mlisb
                     if isBlank(next) || isThematicBreak(next)
                         || isHeading(next) || isBlockquote(next) || isListItem(next) { break }
                     // A table (row + separator), a CLOSED code fence, a
@@ -402,7 +416,7 @@ enum BlockParser {
                     if registry.blockEntry(opening: next) != nil { break }
                     end += 1
                 }
-                blocks.append(Block(kind: .paragraph, range: union(lines[i...end])))
+                blocks.append(Block(kind: setext ? .setextHeading : .paragraph, range: union(lines[i...end])))
                 i = end + 1
             }
         }
@@ -420,6 +434,16 @@ enum BlockParser {
         let t = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard t.count >= 3, let first = t.first,
               first == "-" || first == "*" || first == "_" else { return false }
+        return t.allSatisfy { $0 == first }
+    }
+
+    /// mlisb: a setext underline — 3+ `=` or 3+ `-` after at most 3 spaces, nothing else but trailing space.
+    static func isSetextUnderline(_ line: String) -> Bool {
+        var rest = Substring(line)
+        var indent = 0
+        while indent < 3, rest.first == " " { rest = rest.dropFirst(); indent += 1 }
+        let t = rest.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard t.count >= 3, let first = t.first, first == "=" || first == "-" else { return false }
         return t.allSatisfy { $0 == first }
     }
 
@@ -480,6 +504,18 @@ enum BlockParser {
     /// A block-LaTeX opener: a line whose content starts with `$$`.
     private static func isBlockLatexOpen(_ line: String) -> Bool {
         line.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("$$")
+    }
+
+    /// mlisb: whether `buf[from..<to]` is 3+ of one of `=` / `-` and spaces only.
+    static func isRuleLine(_ buf: [unichar], _ from: Int, _ to: Int) -> Bool {
+        var i = from
+        while i < to, buf[i] == 0x20 || buf[i] == 0x09 { i += 1 }
+        guard i < to, buf[i] == 0x3D || buf[i] == 0x2D else { return false }
+        let c = buf[i]
+        var n = 0
+        while i < to, buf[i] == c { i += 1; n += 1 }
+        while i < to, buf[i] == 0x20 || buf[i] == 0x09 { i += 1 }
+        return i == to && n >= 3
     }
 
     /// mlisb: whether the block's first character is neither whitespace nor a line break.

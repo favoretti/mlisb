@@ -10,6 +10,37 @@ import Foundation
 
 extension MarkdownASTStyler {
 
+    // MARK: - Setext headings
+
+    /// A heading whose single marker is an underline line (`=`/`-`) rather than an ATX `#` run.
+    static func isSetextUnderline(_ markers: [NSRange], _ ns: NSString) -> Bool {
+        guard let marker = markers.first, markers.count == 1, marker.length > 0 else { return false }
+        return ns.character(at: marker.location) != 0x23
+    }
+
+    /// The underline is dimmed and small until the caret is in the heading (or source mode is on); the
+    /// text lines above it close up to it.
+    static func styleSetextUnderline(_ underline: NSRange, range: NSRange, headingPara: NSParagraphStyle,
+                                     ctx: Ctx, into attrs: inout [StyledRange]) {
+        let active = ctx.isActive(range)
+        let size = active ? ctx.baseFont.pointSize : max(6, round(ctx.baseFont.pointSize * 0.5))
+        let font = NSFont(name: ctx.fontName, size: size) ?? .systemFont(ofSize: size)
+        let lineHeight = ceil(font.ascender - font.descender + font.leading)
+
+        let textPara = headingPara.mutableCopy() as! NSMutableParagraphStyle
+        textPara.paragraphSpacing = 0
+        let textRange = NSRange(location: range.location, length: underline.location - range.location)
+        if textRange.length > 0 { attrs.append((ctx.ns.paragraphRange(for: textRange), [.paragraphStyle: textPara])) }
+
+        let para = NSMutableParagraphStyle()
+        para.minimumLineHeight = lineHeight
+        para.maximumLineHeight = lineHeight
+        para.paragraphSpacingBefore = 0
+        para.paragraphSpacing = headingPara.paragraphSpacing
+        attrs.append((ctx.ns.paragraphRange(for: underline), [.paragraphStyle: para]))
+        attrs.append((underline, [.font: font, .foregroundColor: ctx.theme.mutedText]))
+    }
+
     // MARK: - Alerts
 
     enum AlertKind: CaseIterable {

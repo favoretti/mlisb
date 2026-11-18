@@ -734,6 +734,12 @@ extension NativeTextViewCoordinator {
         let windowText = text.substring(with: window)
         // mlisb: ``` / ~~~ fences (any length, indented or quoted) re-pair distant lines too.
         if windowText.contains("```") || windowText.contains("~~~") { return true }
+        // mlisb: a `===` / `---` line turns the paragraph above it into a heading (or opens front matter).
+        var isRule = false
+        windowText.enumerateLines { line, stop in
+            if BlockParser.isSetextUnderline(line) { isRule = true; stop = true }
+        }
+        if isRule { return true }
         return fences.contains { windowText.contains($0.fence) }
     }
 

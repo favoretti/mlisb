@@ -106,7 +106,12 @@ enum GFM {
                 let blocksOK = state.currentBlocks == fullBlocks
                 #expect(incremental == full && blocksOK,
                         "seed \(seed) step \(step) descriptor=\(useDescriptor): diverged after editing at \(loc) (-\(removeLen) +\(insert.debugDescription))")
-                if incremental != full || !blocksOK { return }
+                if incremental != full || !blocksOK {
+                    print("FUZZ text=\(text.debugDescription)")
+                    print("FUZZ incr=\(state.currentBlocks.map { "\($0.kind)\($0.range)" })")
+                    print("FUZZ full=\(fullBlocks.map { "\($0.kind)\($0.range)" })")
+                    return
+                }
             }
         }
     }

@@ -712,6 +712,9 @@ enum MarkdownASTStyler {
             for marker in markers {
                 attrs.append((marker, [.foregroundColor: ctx.theme.headingMarker]))
             }
+            if isSetextUnderline(markers, ctx.ns), let underline = markers.first {  // mlisb
+                styleSetextUnderline(underline, range: range, headingPara: headingPara, ctx: ctx, into: &attrs)
+            }
             styleInlines(inlines, font: headingFont, ctx: ctx, into: &attrs)
 
         case .blockquote(let range, let inlines):
@@ -1022,7 +1025,7 @@ enum MarkdownASTStyler {
         for block in blocks where ctx.inScope(block.range) {
             switch block {
             case .heading(_, let range, let markers, let inlines):
-                if !ctx.isActive(range) { shrink(markers, ctx: ctx, into: &attrs) }
+                if !ctx.isActive(range), !isSetextUnderline(markers, ctx.ns) { shrink(markers, ctx: ctx, into: &attrs) }  // mlisb
                 shrinkInlineMarkers(inlines, ctx: ctx, into: &attrs)
             case .paragraph(_, let inlines), .blockquote(_, let inlines):
                 shrinkInlineMarkers(inlines, ctx: ctx, into: &attrs)

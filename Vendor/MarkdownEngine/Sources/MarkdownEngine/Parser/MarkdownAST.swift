@@ -168,6 +168,8 @@ enum DocumentAST {
             return .paragraph(range: block.range, inlines: scoped ? InlineParser.parse(ns, range: block.range, registry: registry) : [])
         case .heading:
             return heading(block.range, ns, scoped: scoped, registry: registry)
+        case .setextHeading:
+            return setextHeading(block.range, ns, scoped: scoped, registry: registry)
         case .blockquote:
             return .blockquote(range: block.range, inlines: scoped ? InlineParser.parse(ns, range: block.range, registry: registry) : [])
         case .list:
@@ -228,6 +230,23 @@ enum DocumentAST {
             inlines: scoped && contentRange.length > 0
                 ? InlineParser.parse(ns, range: contentRange, registry: registry) : []
         ))
+    }
+
+    /// mlisb: setext heading — the text lines are the content, the single marker is the underline line
+    /// (its first character, `=` or `-`, tells it from an ATX `#` marker).
+    private static func setextHeading(_ range: NSRange, _ ns: NSString, scoped: Bool, registry: ExtensionRegistry) -> BlockNode {
+        let underlineLine = ns.lineRange(for: NSRange(location: NSMaxRange(range) - 1, length: 0))
+        var underlineEnd = NSMaxRange(underlineLine)
+        while underlineEnd > underlineLine.location, isLineBreak(ns.character(at: underlineEnd - 1)) { underlineEnd -= 1 }
+        let underline = NSRange(location: underlineLine.location, length: underlineEnd - underlineLine.location)
+        var contentEnd = underlineLine.location
+        while contentEnd > range.location, isLineBreak(ns.character(at: contentEnd - 1)) { contentEnd -= 1 }
+        let content = NSRange(location: range.location, length: contentEnd - range.location)
+        var i = underline.location
+        while i < underlineEnd, ns.character(at: i) == space { i += 1 }
+        let level = i < underlineEnd && ns.character(at: i) == 0x3D ? 1 : 2
+        return .heading(level: level, range: range, markers: [underline],
+                        inlines: scoped ? InlineParser.parse(ns, range: content, registry: registry) : [])
     }
 
     /// ATX heading: optional indent, `#`×level, space(s), then inline content.
