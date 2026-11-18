@@ -97,13 +97,14 @@ struct TextDiffTests {
         var result: [TextChange] = []
         let few = clock.measure { result = TextDiff.changes(from: a, to: b) }
         #expect(result.count == 5)
-        #expect(few < .milliseconds(500))
+        // Loose on purpose: shared CI machines are several times slower. This only catches a quadratic blow-up.
+        #expect(few < .seconds(5))
 
         let other = (0..<10_000).map { "unrelated \($0) text\n" }.joined()
         var unrelated: [TextChange] = []
         let worst = clock.measure { unrelated = TextDiff.changes(from: a, to: other) }
         #expect(unrelated.count == 1 && unrelated[0].kind == .modified)
-        #expect(worst < .seconds(2))
+        #expect(worst < .seconds(10))
         print("diff timings: scattered edits \(few), unrelated \(worst)")
     }
 }
