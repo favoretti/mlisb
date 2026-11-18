@@ -111,7 +111,13 @@ enum FS {
     func show(_ url: URL) -> Bool {
         let known = FS.markdown.union(FS.previewable).contains(url.pathExtension.lowercased())
         guard known, FS.under(url, root), FileManager.default.fileExists(atPath: url.path) else { return false }
-        selection = url
+        // Open the folders above it, or the selected row would stay hidden.
+        var dir = root
+        while let next = (children[dir] ?? []).first(where: { $0.isDir && FS.under(url, $0.url) }) {
+            setExpanded(next.url, true)
+            dir = next.url
+        }
+        selection = children[dir]?.first { $0.url.path == url.path }?.url ?? url
         return true
     }
 

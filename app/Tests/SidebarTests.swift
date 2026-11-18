@@ -33,6 +33,18 @@ import XCTest
         XCTAssertEqual(FS.uniqueURL(in: dir, name: "Untitled Folder").lastPathComponent, "Untitled Folder")
     }
 
+    func testShowingANestedFileOpensTheFoldersAboveIt() throws {
+        try FileManager.default.createDirectory(at: dir.appending(path: "docs/adr"), withIntermediateDirectories: true)
+        try make("top.md")
+        try Data("x".utf8).write(to: dir.appending(path: "docs/adr/one.md"))
+        let model = FolderModel(root: dir)
+        XCTAssertTrue(model.show(dir.appending(path: "docs/adr/one.md")))
+        let docs = try XCTUnwrap(model.children[dir]?.first { $0.isDir })
+        let adr = try XCTUnwrap(model.children[docs.url]?.first { $0.isDir })
+        XCTAssertTrue(model.isExpanded(docs.url) && model.isExpanded(adr.url))
+        XCTAssertEqual(model.selection, model.children[adr.url]?.first?.url)
+    }
+
     func testMoveRefusesToOverwriteOrEnterItself() throws {
         try make("a.md", "b.md", "d/")
         XCTAssertThrowsError(try FS.move(dir.appending(component: "a.md"), to: dir.appending(component: "b.md")))

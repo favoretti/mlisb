@@ -62,7 +62,7 @@ struct WorkspaceView: View {
         guard let root else { return self.root = url }
         if url.standardizedFileURL == root.standardizedFileURL { return }
         if let folder, FS.under(url, root) {
-            folder.selection = url
+            if !folder.show(url) { folder.selection = url }
         } else {
             openWindow(value: url)
         }
