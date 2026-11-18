@@ -70,6 +70,27 @@ Then sign the app. Xcode's Archive and Export does all of this by itself.
 
 Mac App Store variant (the store forbids self-updating): in `app/project.yml` drop the `Sparkle:` entry under `packages`, the `- package: Sparkle` dependency, the four `SU…` Info.plist keys, and the `mach-lookup.global-name` entitlement with its two entries. Then run `xcodegen generate`. All updater code is wrapped in `#if canImport(Sparkle)`, so it compiles away, along with the Settings window and the menu item.
 
+## Releasing
+
+`scripts/build-app.sh` builds a universal `dist/mlisb.app` and zips it. With no settings it signs
+ad-hoc, which is enough to check the build:
+
+```
+VERSION=0.1.0 scripts/build-app.sh
+```
+
+Set `SIGN_IDENTITY` to a Developer ID identity to sign for distribution, and `NOTARY_PROFILE` to a
+`notarytool` keychain profile to notarize and staple.
+
+Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: it builds, signs and notarizes, runs
+the tests, generates the update feed (`appcast.xml`), publishes a GitHub release and updates the
+Homebrew cask. The workflow needs these repository secrets: `DEVELOPER_ID_P12`,
+`DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `SPARKLE_ED_KEY`,
+`TAP_DEPLOY_KEY`.
+
+The app looks for updates at this repository's latest release, so releases must be publicly
+downloadable for updates to work.
+
 ## Keyboard shortcuts
 
 | Shortcut | Action |

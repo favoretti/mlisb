@@ -10,3 +10,4 @@ app/mlisb.entitlements
 Kit/Sources/MlisbKit/Resources/render/
 notes/
 .claude/worktrees/
+dist/
