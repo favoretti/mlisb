@@ -153,6 +153,8 @@ enum BlockParser {
                 if i + 1 < end, buf[i + 1] == 0x24 { return true }       // $$
             } else if buf[i] == 0x60, i + 2 < end, buf[i + 1] == 0x60, buf[i + 2] == 0x60 {
                 return true                                              // ```
+            } else if buf[i] == 0x7E, i + 2 < end, buf[i + 1] == 0x7E, buf[i + 2] == 0x7E {   // mlisb: ~~~
+                return true
             }
             // Extension fences pair with a distant partner exactly like ``` —
             // an edit touching one must force the full reparse too.
@@ -203,8 +205,12 @@ enum BlockParser {
             if NSMaxRange(oldBlocks[m].range) >= changeEnd { hi = m } else { lo = m + 1 }
         }
         let lastIdx = lo
-        let winFirst = max(0, min(firstIdx, lastIdx) - 1)
-        let winLast = min(oldBlocks.count - 1, max(firstIdx, lastIdx) + 1)
+        var winFirst = max(0, min(firstIdx, lastIdx) - 1)
+        var winLast = min(oldBlocks.count - 1, max(firstIdx, lastIdx) + 1)
+        // mlisb: an indented fence is valid only under a list item above it, so the window must start on
+        // a column-0 block and swallow the indented blocks after it.
+        while winFirst > 0, !startsAtColumnZero(oldBlocks[winFirst], o) { winFirst -= 1 }
+        winLast = extendOverIndented(oldBlocks, from: winLast, chars: o)
 
         // 3. Opaque multi-line blocks (fences / block LaTeX) in the window are
         // fine for INTERIOR edits: the window contains each block wholly, the
@@ -238,6 +244,12 @@ enum BlockParser {
                 }
             default: break
             }
+        }
+
+        // mlisb: a fence or blank line between two quotes / lists can go away; they must then merge across the cut.
+        for kind in [BlockKind.blockquote, .list] {
+            if reparsed.last?.kind == kind, winLast + 1 < oldBlocks.count, oldBlocks[winLast + 1].kind == kind { return nil }
+            if reparsed.first?.kind == kind, winFirst > 0, oldBlocks[winFirst - 1].kind == kind { return nil }
         }
 
         // 6. Splice: prefix (unchanged) + reparsed window + suffix (shifted).
@@ -274,14 +286,31 @@ enum BlockParser {
 
         func lineText(_ i: Int) -> String { nsText.substring(with: lines[i]) }
 
-        /// Line index of the fence closing a code block opened at `start`; nil when unclosed.
-        func fenceCloseIndex(from start: Int) -> Int? {
+        /// Line index of the fence closing a code block opened at `start`; nil when `start` is not a
+        /// fence opener or it is unclosed (an unclosed fence stays ordinary text).
+        func fenceCloseIndex(from start: Int) -> Int? {  // mlisb: ``` and ~~~, indented, quoted
+            guard let open = FenceScanner.opening(in: nsText, line: lines[start]) else { return nil }
+            if open.quoteDepth == 0, open.indent >= 4, !underListItem(start) { return nil }
             var scan = start + 1
             while scan < lines.count {
-                if isFence(lineText(scan)) { return scan }
-                scan += 1
+                switch FenceScanner.role(of: lines[scan], in: nsText, after: open) {
+                case .closer: return scan
+                case .exit: return nil
+                case .content: scan += 1
+                }
             }
             return nil
+        }
+
+        /// Whether the nearest column-0 line above `idx` is a list item (blank lines skipped).
+        func underListItem(_ idx: Int) -> Bool {  // mlisb
+            var j = idx - 1
+            while j >= 0 {
+                let t = lineText(j)
+                if let f = t.first, f != " ", f != "\t", f != "\n", f != "\r" { return isListItem(t) }
+                j -= 1
+            }
+            return false
         }
 
         /// Line index of the `$$` closing a block-LaTeX run opened at `start`; nil if none.
@@ -305,7 +334,7 @@ enum BlockParser {
                 blocks.append(Block(kind: .blank, range: union(lines[i...end])))
                 i = end + 1
 
-            } else if isFence(line), let end = fenceCloseIndex(from: i) {
+            } else if let end = fenceCloseIndex(from: i) {
                 blocks.append(Block(kind: .fencedCode, range: union(lines[i...end])))
                 i = end + 1
 
@@ -319,7 +348,8 @@ enum BlockParser {
 
             } else if isBlockquote(line) {
                 var end = i
-                while end + 1 < lines.count, isBlockquote(lineText(end + 1)) { end += 1 }
+                while end + 1 < lines.count, isBlockquote(lineText(end + 1)),
+                      fenceCloseIndex(from: end + 1) == nil { end += 1 }   // mlisb: a quoted fence is its own block
                 blocks.append(Block(kind: .blockquote, range: union(lines[i...end])))
                 i = end + 1
 
@@ -366,7 +396,7 @@ enum BlockParser {
                     // A table (row + separator), a CLOSED code fence, a
                     // block-LaTeX run, or an extension fence interrupts it —
                     // an unclosed opener stays part of the paragraph.
-                    if isFence(next), fenceCloseIndex(from: end + 1) != nil { break }
+                    if fenceCloseIndex(from: end + 1) != nil { break }
                     if isTableRow(next), end + 2 < lines.count, isTableSeparator(lineText(end + 2)) { break }
                     if isBlockLatexOpen(next), blockLatexCloseIndex(from: end + 1) != nil { break }
                     if registry.blockEntry(opening: next) != nil { break }
@@ -383,11 +413,6 @@ enum BlockParser {
 
     private static func isBlank(_ line: String) -> Bool {
         line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    /// An opening or closing fence line: starts with three backticks.
-    private static func isFence(_ line: String) -> Bool {
-        line.hasPrefix("```")
     }
 
     /// `^\s*(-{3,}|\*{3,}|_{3,})\s*$` — a solid run of 3+ of one of `- * _`.
@@ -455,6 +480,26 @@ enum BlockParser {
     /// A block-LaTeX opener: a line whose content starts with `$$`.
     private static func isBlockLatexOpen(_ line: String) -> Bool {
         line.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("$$")
+    }
+
+    /// mlisb: whether the block's first character is neither whitespace nor a line break.
+    static func startsAtColumnZero(_ block: Block, _ chars: [unichar]) -> Bool {
+        let c = chars[block.range.location]
+        return c != 0x20 && c != 0x09 && c != 0x0A && c != 0x0D
+    }
+
+    /// mlisb: widens `idx` over following blocks that begin with indentation (past blank blocks) —
+    /// their classification depends on the list context above, which the edit may have changed.
+    static func extendOverIndented(_ blocks: [Block], from idx: Int, chars: [unichar]) -> Int {
+        var last = idx
+        while true {
+            var k = last + 1
+            while k < blocks.count, blocks[k].kind == .blank { k += 1 }
+            guard k < blocks.count,
+                  chars[blocks[k].range.location] == 0x20 || chars[blocks[k].range.location] == 0x09
+            else { return last }
+            last = k
+        }
     }
 
     private static func union(_ ranges: ArraySlice<NSRange>) -> NSRange {

@@ -19,15 +19,19 @@ enum MarkdownTokenizer {
 
     static func extractLanguage(from token: MarkdownToken, in text: String) -> String? {
         guard token.kind == .codeBlock,
-              let openingMarker = token.markerRanges.first,
-              openingMarker.length > 4 else { return nil }
-
+              let openingMarker = token.markerRanges.first else { return nil }
         let nsText = text as NSString
-        let langRange = NSRange(location: openingMarker.location + 3, length: openingMarker.length - 4)
+        guard NSMaxRange(openingMarker) <= nsText.length else { return nil }
+        return FenceScanner.language(ofOpenerLine: openingMarker, in: nsText)  // mlisb
+    }
 
-        guard langRange.location + langRange.length <= nsText.length else { return nil }
-
-        let langString = nsText.substring(with: langRange).trimmingCharacters(in: .whitespacesAndNewlines)
-        return langString.isEmpty ? nil : langString
+    /// mlisb: a fenced block's code with the quote / indentation prefix of each line stripped.
+    static func codeText(of token: MarkdownToken, in ns: NSString) -> String {
+        guard let open = FenceScanner.opening(ofBlock: token.range, in: ns) else {
+            return ns.substring(with: token.contentRange)
+        }
+        let lines = FenceScanner.body(ofBlock: NSRange(location: token.range.location, length: token.range.length),
+                                      in: ns, open: open).lines
+        return FenceScanner.strippedCode(lines: lines, in: ns).text
     }
 }

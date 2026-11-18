@@ -98,6 +98,8 @@ extension MarkdownTokenizer {
         let fences = registry.blockEntries.map(\.fenceChars)
         if BlockParser.hasBlockDelimiter(o, changeStart, diff.changeEndOld, fences: fences)
             || BlockParser.hasBlockDelimiter(n, changeStart, changeEndNew, fences: fences) { return nil }
+        // mlisb: indented blocks after the edit may change kind with the list context above.
+        func widenOverIndented(_ hi: inout Int) { hi = BlockParser.extendOverIndented(blocks, from: hi, chars: n) }
 
         // New blocks touching the changed char range [changeStart, changeEndNew].
         // Blocks tile in order → the touching set is one contiguous run;
@@ -120,6 +122,7 @@ extension MarkdownTokenizer {
         }
         lo = first
         hi = last
+        widenOverIndented(&hi)
 
         // Widen the window until no previous token straddles either cut (a block's extent can change in place).
         var expanded = true
@@ -155,7 +158,9 @@ extension MarkdownTokenizer {
     /// the token logic. The key carries the registry fingerprint — the same text
     /// tokenizes differently under a different extension set.
     static func cachedBlockTokens(kind: BlockKind, sub: String, registry: ExtensionRegistry = .empty) -> [MarkdownToken] {
-        let key = registry.fingerprint.isEmpty ? sub : registry.fingerprint + "\u{1F}" + sub
+        // mlisb: the same text can be a fence under a list item and a paragraph elsewhere, so a fence's kind is part of the key.
+        let text = kind == .fencedCode ? "\u{1E}" + sub : sub
+        let key = registry.fingerprint.isEmpty ? text : registry.fingerprint + "\u{1F}" + text
         blockTokenLock.lock()
         if let cached = blockTokenCache[key] {
             blockTokenLock.unlock()

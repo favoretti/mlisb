@@ -90,7 +90,7 @@ extension NativeTextViewCoordinator {
                 id: originalIndex,
                 rect: boundingRect,
                 language: MarkdownTokenizer.extractLanguage(from: token, in: textView.string),
-                code: nsText.substring(with: token.contentRange)
+                code: MarkdownTokenizer.codeText(of: token, in: nsText)  // mlisb: strip fence indentation
             )
         }
 

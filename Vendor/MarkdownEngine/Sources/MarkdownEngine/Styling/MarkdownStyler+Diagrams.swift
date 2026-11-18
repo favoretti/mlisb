@@ -18,8 +18,9 @@ extension MarkdownStyler {
         for (idx, token) in ctx.scoped(StylingContext.indexed(ctx.tokens, .codeBlock)) {
             guard !ctx.activeTokenIndices.contains(idx), token.markerRanges.count == 2 else { continue }
             let openLine = ctx.nsText.substring(with: token.markerRanges[0])
-            let language = openLine.dropFirst(3).split(whereSeparator: \.isWhitespace).first.map(String.init) ?? ""
-            let source = ctx.nsText.substring(with: token.contentRange)
+            let language = FenceScanner.language(ofOpenerLine: token.markerRanges[0], in: ctx.nsText)?
+                .split(whereSeparator: \.isWhitespace).first.map(String.init) ?? ""
+            let source = MarkdownTokenizer.codeText(of: token, in: ctx.nsText)   // prefixes stripped
             guard !language.isEmpty,
                   !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   let image = ctx.services.diagrams.image(language: language, source: source),
@@ -38,7 +39,7 @@ extension MarkdownStyler {
                 paragraphSpacingBefore: ctx.configuration.blockLatex.paragraphSpacingBefore,
                 paragraphSpacing: ctx.configuration.blockLatex.paragraphSpacing,
                 alignment: .center,
-                mode: .collapsedSource(markerTexts: [openLine, "```"]),
+                mode: .collapsedSource(markerTexts: [openLine, ctx.nsText.substring(with: token.markerRanges[1])]),
                 ctx: ctx,
                 attrs: &attrs
             )

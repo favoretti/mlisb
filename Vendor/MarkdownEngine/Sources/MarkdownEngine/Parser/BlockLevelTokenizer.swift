@@ -16,7 +16,6 @@ import Foundation
 
 enum BlockLevelTokenizer {
 
-    private static let backtick: unichar = 0x60
     private static let dollar: unichar = 0x24
     private static let hash: unichar = 0x23
     private static let pipe: unichar = 0x7C
@@ -146,28 +145,20 @@ enum BlockLevelTokenizer {
     private static func codeBlock(in s: NSString) -> [MarkdownToken] {
         let len = s.length
         guard len >= 3 else { return [] }
+        // mlisb: ``` / ~~~ of any length, indented or quoted; the closer marker runs from its line start to the end of the fence run.
+        let whole = NSRange(location: 0, length: len)
+        guard let open = FenceScanner.opening(ofBlock: whole, in: s),
+              let closer = FenceScanner.body(ofBlock: whole, in: s, open: open).closer else { return [] }
         let afterOpenLine = line(in: s, from: 0).nextStart
-        var lineStart = afterOpenLine
-        var closingStart = -1
-        while lineStart < len {
-            if lineStart + 3 <= len,
-               s.character(at: lineStart) == backtick,
-               s.character(at: lineStart + 1) == backtick,
-               s.character(at: lineStart + 2) == backtick {
-                closingStart = lineStart
-                break
-            }
-            let next = line(in: s, from: lineStart).nextStart
-            if next <= lineStart { break }
-            lineStart = next
-        }
-        guard closingStart >= 0 else { return [] }   // no closing fence → legacy didn't match
+        var runEnd = closer.location
+        while runEnd < NSMaxRange(closer), s.character(at: runEnd) != open.char { runEnd += 1 }
+        while runEnd < NSMaxRange(closer), s.character(at: runEnd) == open.char { runEnd += 1 }
         return [MarkdownToken(
             kind: .codeBlock,
-            range: NSRange(location: 0, length: closingStart + 3),
-            contentRange: NSRange(location: afterOpenLine, length: closingStart - afterOpenLine),
+            range: NSRange(location: 0, length: runEnd),
+            contentRange: NSRange(location: afterOpenLine, length: closer.location - afterOpenLine),
             markerRanges: [NSRange(location: 0, length: afterOpenLine),
-                           NSRange(location: closingStart, length: 3)])]
+                           NSRange(location: closer.location, length: runEnd - closer.location)])]
     }
 
     // MARK: - Table  (legacy header `|…|` + separator `|-…-|` + data rows)

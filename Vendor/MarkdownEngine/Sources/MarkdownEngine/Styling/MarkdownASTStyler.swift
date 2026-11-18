@@ -824,51 +824,79 @@ enum MarkdownASTStyler {
 
     private static func styleCodeBlock(range: NSRange, ctx: Ctx, into attrs: inout [StyledRange]) {
         let parts = codeBlockParts(range, ctx.ns)
+        var codePara = ctx.codeParagraphStyle
+        if parts.quoteDepth > 0 {  // mlisb: a quoted fence sits inside the quote bar
+            let extra = CGFloat(parts.quoteDepth) * MarkdownTextLayoutFragment.blockquoteIndentPerLevel
+                + MarkdownTextLayoutFragment.blockquoteIndentPerLevel * 0.5
+            let quoted = codePara.mutableCopy() as! NSMutableParagraphStyle
+            quoted.headIndent += extra
+            quoted.firstLineHeadIndent += extra
+            codePara = quoted
+            attrs.append((parts.codeRange, [.blockquoteLevel: parts.quoteDepth]))
+        }
         attrs.append((parts.codeRange, [
-            .font: ctx.codeFont, .backgroundColor: ctx.codeBackground, .paragraphStyle: ctx.codeParagraphStyle,
+            .font: ctx.codeFont, .backgroundColor: ctx.codeBackground, .paragraphStyle: codePara,
         ]))
         // Suppress spell-check underlines on the whole fenced block — code is not prose.
         attrs.append((parts.codeRange, [.spellingState: 0]))
-        let codeContent = ctx.ns.substring(with: parts.content)
-        if !codeContent.isEmpty,
-           let highlighted = ctx.config.services.syntaxHighlighter.highlight(code: codeContent, language: parts.language) {
+        let code = FenceScanner.strippedCode(lines: parts.lines, in: ctx.ns)  // mlisb: prefixes stripped
+        if !code.text.isEmpty,
+           let highlighted = ctx.config.services.syntaxHighlighter.highlight(code: code.text, language: parts.language) {
+            var seg = 0
             highlighted.enumerateAttributes(in: NSRange(location: 0, length: highlighted.length)) { a, r, _ in
                 guard let fg = a[.foregroundColor] else { return }
-                attrs.append((NSRange(location: parts.content.location + r.location, length: r.length), [.foregroundColor: fg]))
+                // Runs arrive in ascending order, so one cursor maps them back onto the source lines.
+                while seg < code.segments.count,
+                      code.segments[seg].stripped + code.segments[seg].length <= r.location { seg += 1 }
+                var i = seg
+                while i < code.segments.count, code.segments[i].stripped < NSMaxRange(r) {
+                    let s = code.segments[i]
+                    let lo = max(r.location, s.stripped), hi = min(NSMaxRange(r), s.stripped + s.length)
+                    if hi > lo {
+                        attrs.append((NSRange(location: s.source + (lo - s.stripped), length: hi - lo), [.foregroundColor: fg]))
+                    }
+                    i += 1
+                }
             }
         }
         // Use the whole block range (not codeRange): an incomplete fence collapses codeRange to the ```.
-        let markerAttrs: [NSAttributedString.Key: Any] = ctx.isActive(range)
+        let active = ctx.isActive(range)
+        let markerAttrs: [NSAttributedString.Key: Any] = active
             ? [.foregroundColor: ctx.theme.mutedText, .font: ctx.codeFont]
             : [.foregroundColor: NSColor.clear, .font: ctx.codeFont]   // hiddenMarkerFont == codeFont
         attrs.append((parts.openFence, markerAttrs))
         attrs.append((parts.closeFence, markerAttrs))
+        if !active {  // mlisb: the indentation / `>` prefix of each code line collapses
+            for (line, prefix) in parts.lines where prefix > 0 {
+                attrs.append((NSRange(location: line.location, length: prefix),
+                              [.font: ctx.inlineMarkerFont, .kern: -ctx.inlineMarkerFont.pointSize]))
+            }
+        }
     }
 
-    /// Split a fenced-code range into open fence (+language), content, close fence, and language.
+    /// Split a fenced-code range into open fence line (+language), content, close fence (its line prefix and
+    /// run), the code lines with their strippable prefix, and the language.
     private static func codeBlockParts(_ range: NSRange, _ ns: NSString)
-        -> (codeRange: NSRange, openFence: NSRange, content: NSRange, closeFence: NSRange, language: String?) {
-        let start = range.location
-        let end = NSMaxRange(range)
-        var openEnd = start
-        while openEnd < end, ns.character(at: openEnd) != 0x0A { openEnd += 1 }
-        if openEnd < end { openEnd += 1 }
-        let openFence = NSRange(location: start, length: openEnd - start)
-
-        let lastLine = ns.lineRange(for: NSRange(location: max(start, end - 1), length: 0))
-        var bt = lastLine.location
-        while bt < NSMaxRange(lastLine), ns.character(at: bt) == 0x60 { bt += 1 }
-        let closeFence = NSRange(location: lastLine.location, length: bt - lastLine.location)
-        let codeRange = NSRange(location: start, length: NSMaxRange(closeFence) - start)
-        let content = NSRange(location: openEnd, length: max(0, lastLine.location - openEnd))
-
-        var language: String?
-        if openFence.length > 3 {
-            let raw = ns.substring(with: NSRange(location: start + 3, length: openFence.length - 3))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            language = raw.isEmpty ? nil : raw
+        -> (codeRange: NSRange, openFence: NSRange, content: NSRange, closeFence: NSRange, language: String?,
+            lines: [(source: NSRange, prefix: Int)], quoteDepth: Int) {
+        guard let open = FenceScanner.opening(ofBlock: range, in: ns) else {
+            return (range, range, NSRange(location: NSMaxRange(range), length: 0),
+                    NSRange(location: NSMaxRange(range), length: 0), nil, [], 0)
         }
-        return (codeRange, openFence, content, closeFence, language)
+        let body = FenceScanner.body(ofBlock: range, in: ns, open: open)
+        var closeFence = NSRange(location: NSMaxRange(range), length: 0)
+        var contentEnd = NSMaxRange(range)
+        if let closer = body.closer {
+            var run = closer.location
+            while run < NSMaxRange(closer), ns.character(at: run) != open.char { run += 1 }
+            while run < NSMaxRange(closer), ns.character(at: run) == open.char { run += 1 }
+            closeFence = NSRange(location: closer.location, length: run - closer.location)
+            contentEnd = closer.location
+        }
+        let content = NSRange(location: NSMaxRange(body.opener), length: max(0, contentEnd - NSMaxRange(body.opener)))
+        let codeRange = NSRange(location: range.location, length: NSMaxRange(closeFence) - range.location)
+        return (codeRange, body.opener, content, closeFence,
+                FenceScanner.language(ofOpenerLine: body.opener, in: ns), body.lines, open.quoteDepth)
     }
 
     // MARK: - Inlines (composing)

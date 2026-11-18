@@ -728,11 +728,12 @@ extension NativeTextViewCoordinator {
     /// not the document.
     func editWindowTouchesExtensionFence(in text: NSString, around range: NSRange) -> Bool {
         let fences = cachedExtensionRegistry.blockEntries
-        guard !fences.isEmpty else { return false }
         guard range.location != NSNotFound, range.location >= 0,
               NSMaxRange(range) <= text.length else { return false }
         let window = text.lineRange(for: range)
         let windowText = text.substring(with: window)
+        // mlisb: ``` / ~~~ fences (any length, indented or quoted) re-pair distant lines too.
+        if windowText.contains("```") || windowText.contains("~~~") { return true }
         return fences.contains { windowText.contains($0.fence) }
     }
 

@@ -220,31 +220,18 @@ public enum MarkdownHTMLRenderer {
 
     /// Fenced code: drop the opening ```lang / closing ``` fence lines, escape body.
     private static func renderCodeBlock(range: NSRange, ns: NSString) -> String {
-        let raw = ns.substring(with: range)
-        var lines = raw.components(separatedBy: "\n")
-        if lines.last == "" { lines.removeLast() }   // drop trailing-newline artifact
-
-        let language = fenceLanguage(lines.first ?? "")
-        var body = Array(lines.dropFirst())
-        if let last = body.last, isFenceLine(last) { body.removeLast() }
-
-        let escaped = escape(body.joined(separator: "\n"))
+        // mlisb: ``` / ~~~, indented or quoted — FenceScanner strips the prefixes and the fence lines.
+        guard let open = FenceScanner.opening(ofBlock: range, in: ns) else { return "<pre><code></code></pre>" }
+        let body = FenceScanner.body(ofBlock: range, in: ns, open: open)
+        var code = FenceScanner.strippedCode(lines: body.lines, in: ns).text
+        if code.hasSuffix("\n") { code.removeLast() }   // the last code line's own terminator
+        let language = FenceScanner.language(ofOpenerLine: body.opener, in: ns)?
+            .split(whereSeparator: \.isWhitespace).first.map(String.init)
+        let escaped = escape(code)
         if let language, !language.isEmpty {
             return "<pre><code class=\"language-\(escape(language))\">\(escaped)</code></pre>"
         }
         return "<pre><code>\(escaped)</code></pre>"
-    }
-
-    /// The parser only produces column-0 backtick fences (BlockParser.isFence),
-    /// so match that contract when stripping the closing fence line.
-    private static func isFenceLine(_ line: String) -> Bool {
-        line.hasPrefix("```")
-    }
-
-    /// Language info-string from an opening fence line (chars after the backticks).
-    private static func fenceLanguage(_ line: String) -> String? {
-        let lang = line.drop { $0 == "`" }.trimmingCharacters(in: .whitespaces)
-        return lang.isEmpty ? nil : lang
     }
 
     private static func renderTable(range: NSRange, ns: NSString) -> String {
