@@ -138,8 +138,9 @@ downloadable for updates to work.
 
 ## Licenses
 
-- MarkdownEngine (vendored, modified): Apache-2.0.
-- mermaid: MIT.
+mlisb is released under the MIT license, see [LICENSE](LICENSE). The parts it builds on keep their own:
+
+- MarkdownEngine (vendored, modified): Apache-2.0, see `Vendor/MarkdownEngine/LICENSE`.
+- mermaid, SwiftMath, Sparkle: MIT.
 - D2: MPL-2.0.
 - highlight.js: BSD-3-Clause, bundled by the engine's code-block product.
-- The project itself has no license file yet.
