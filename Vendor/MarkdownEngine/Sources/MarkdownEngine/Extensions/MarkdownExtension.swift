@@ -92,6 +92,9 @@ struct ExtensionRegistry {
     /// Stable fingerprint for cache keying ("" when empty). Two registries with
     /// the same fingerprint produce identical parses for identical text.
     let fingerprint: String
+    /// mlisb: definitions of the document being parsed; set per parse by `DocumentAST`, never part of the fingerprint
+    /// (the token path parses without them).
+    var references: ReferenceTable?
 
     static let empty = ExtensionRegistry(entries: [], blockEntries: [], directives: .empty, fingerprint: "")
 

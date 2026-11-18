@@ -48,6 +48,10 @@ enum GFM {
         (value(.font, at: index, in: attrs) as? NSFont)?.fontDescriptor.symbolicTraits.contains(.bold) == true
     }
 
+    static func italic(at index: Int, in attrs: [StyledRange]) -> Bool {
+        (value(.font, at: index, in: attrs) as? NSFont)?.fontDescriptor.symbolicTraits.contains(.italic) == true
+    }
+
     /// Full styled pipeline (AST + image passes), caret outside every construct unless given.
     static func fullAttrs(_ text: String, caret: Int = -1, services: MarkdownEditorServices = .default) -> [StyledRange] {
         _ = NSApplication.shared

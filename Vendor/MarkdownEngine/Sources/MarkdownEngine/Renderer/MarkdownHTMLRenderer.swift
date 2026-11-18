@@ -109,6 +109,13 @@ public enum MarkdownHTMLRenderer {
         case .blank:
             return nil
 
+        case .linkDefinition:  // mlisb: definitions produce no output of their own
+            return nil
+
+        case .footnoteDefinition(let range, let marker, let inlines):  // mlisb
+            let id = ns.substring(with: NSRange(location: marker.location + 2, length: marker.length - 4))
+            return "<div class=\"footnote-definition\" id=\"fn-\(escape(id))\"><sup>\(escape(id))</sup> \(renderInlines(inlines, ns: ns, env: env))</div>"
+
         case .frontMatter(let range):  // mlisb
             var lines = ns.substring(with: range).components(separatedBy: "\n")
             if lines.last == "" { lines.removeLast() }
@@ -302,6 +309,9 @@ public enum MarkdownHTMLRenderer {
             return "<img src=\"\(t)\" alt=\"\(t)\">"
 
         case .ext(let node):
+            if node.extensionID.hasPrefix(GFMInline.idPrefix) {  // mlisb
+                return gfmInlineHTML(node, ns: ns, env: env)
+            }
             // A self-contained directive has no body; a container's body is
             // its content range.
             if let directive = env.directive(forNodeID: node.extensionID) {
@@ -325,6 +335,19 @@ public enum MarkdownHTMLRenderer {
 
         case .escape(_, let character, _):
             return escape(ns.substring(with: character))
+        }
+    }
+
+    /// mlisb: reference links / images, footnote references.
+    private static func gfmInlineHTML(_ node: ExtensionInlineNode, ns: NSString, env: Env) -> String {
+        switch node.extensionID {
+        case GFMInline.footnoteID:
+            let id = escape(ns.substring(with: node.contentRange))
+            return "<sup class=\"footnote-ref\"><a href=\"#fn-\(id)\">\(id)</a></sup>"
+        case GFMInline.refImageID:
+            return "<img src=\"\(escape(node.target ?? ""))\" alt=\"\(escape(ns.substring(with: node.contentRange)))\">"
+        default:
+            return "<a href=\"\(escape(node.target ?? ""))\">\(renderInlines(node.children, ns: ns, env: env, linkable: false))</a>"
         }
     }
 

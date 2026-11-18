@@ -139,6 +139,7 @@ enum MarkdownASTStyler {
                 case .emphasis(_, _, _, let children):
                     walk(children)
                 case .ext(let node):
+                    if node.extensionID.hasPrefix(GFMInline.idPrefix) { ranges.append(node.range) }  // mlisb
                     walk(node.children)
                 default: break
                 }
@@ -146,7 +147,8 @@ enum MarkdownASTStyler {
         }
         for block in blocks {
             switch block {
-            case .paragraph(_, let inlines), .heading(_, _, _, let inlines), .blockquote(_, let inlines):
+            case .paragraph(_, let inlines), .heading(_, _, _, let inlines), .blockquote(_, let inlines),
+                 .footnoteDefinition(_, _, let inlines):  // mlisb
                 walk(inlines)
             case .list(_, let items):
                 for item in items { walk(item.inlines) }
@@ -732,6 +734,11 @@ enum MarkdownASTStyler {
             styleCodeBlock(range: range, ctx: ctx, into: &attrs)
         case .frontMatter(let range):  // mlisb
             styleFrontMatter(range: range, ctx: ctx, into: &attrs)
+        case .linkDefinition(let range):  // mlisb
+            styleDefinitionLine(range: range, marker: range, ctx: ctx, into: &attrs)
+        case .footnoteDefinition(let range, let marker, let inlines):  // mlisb
+            styleDefinitionLine(range: range, marker: marker, ctx: ctx, into: &attrs)
+            styleInlines(inlines, font: font, ctx: ctx, into: &attrs)
         case .thematicBreak(let range):
             styleThematicBreak(range: range, ctx: ctx, into: &attrs)
         case .ext(let node):
@@ -911,7 +918,7 @@ enum MarkdownASTStyler {
 
     // MARK: - Inlines (composing)
 
-    private static func styleInlines(_ nodes: [InlineNode], font: NSFont, ctx: Ctx, into attrs: inout [StyledRange]) {
+    static func styleInlines(_ nodes: [InlineNode], font: NSFont, ctx: Ctx, into attrs: inout [StyledRange]) {
         for node in nodes {
             switch node {
             case .text:
@@ -926,6 +933,10 @@ enum MarkdownASTStyler {
                 styleInlines(children, font: composed, ctx: ctx, into: &attrs)
 
             case .ext(let node):
+                if node.extensionID.hasPrefix(GFMInline.idPrefix) {  // mlisb
+                    styleGFMInline(node, font: font, ctx: ctx, into: &attrs)
+                    break
+                }
                 // Directives come through the same node shape under a reserved
                 // id namespace. They compose a font TRANSFORM over the
                 // inherited font and hand it down, so emphasis nested in the
@@ -1036,7 +1047,9 @@ enum MarkdownASTStyler {
                 for item in items { shrinkInlineMarkers(item.inlines, ctx: ctx, into: &attrs) }
             case .ext(let node):
                 shrinkInlineMarkers(node.inlines, ctx: ctx, into: &attrs)
-            case .codeBlock, .blockLatex, .table, .thematicBreak, .blank, .frontMatter:
+            case .footnoteDefinition(_, _, let inlines):  // mlisb
+                shrinkInlineMarkers(inlines, ctx: ctx, into: &attrs)
+            case .codeBlock, .blockLatex, .table, .thematicBreak, .blank, .frontMatter, .linkDefinition:
                 break
             }
         }

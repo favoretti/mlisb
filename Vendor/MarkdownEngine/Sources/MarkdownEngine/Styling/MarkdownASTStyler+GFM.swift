@@ -10,6 +10,53 @@ import Foundation
 
 extension MarkdownASTStyler {
 
+    // MARK: - References and footnotes
+
+    /// A definition line is dimmed (the whole line, or just the `[^id]:` marker of a footnote).
+    static func styleDefinitionLine(range: NSRange, marker: NSRange, ctx: Ctx, into attrs: inout [StyledRange]) {
+        var line = marker
+        if marker == range {
+            line = range
+            while line.length > 0, [0x0A, 0x0D].contains(ctx.ns.character(at: NSMaxRange(line) - 1)) { line.length -= 1 }
+        }
+        guard line.length > 0 else { return }
+        attrs.append((line, [.foregroundColor: ctx.theme.mutedText, .spellingState: 0]))
+    }
+
+    /// Reference links / images read and click like inline links (the click offers the definition's target to
+    /// `onOpenLink`); a footnote reference is a small raised id whose click jumps to its definition.
+    static func styleGFMInline(_ node: ExtensionInlineNode, font: NSFont, ctx: Ctx, into attrs: inout [StyledRange]) {
+        attrs.append((node.range, [.spellingState: 0]))
+        let active = ctx.isActive(node.range)
+        for marker in node.markers where active { attrs.append((marker, [.foregroundColor: ctx.theme.mutedText])) }
+        switch node.extensionID {
+        case GFMInline.footnoteID:
+            let id = ctx.ns.substring(with: node.contentRange)
+            if active {
+                attrs.append((node.contentRange, [.foregroundColor: ctx.theme.link.withAlphaComponent(ctx.config.link.activeLinkAlpha)]))
+            } else {
+                let small = NSFont(descriptor: font.fontDescriptor, size: max(6, round(font.pointSize * 0.7))) ?? font
+                attrs.append((node.contentRange, [
+                    .font: small, .baselineOffset: round(font.pointSize * 0.35), .foregroundColor: ctx.theme.link,
+                    .link: URL(string: "mlisb-footnote:\(id.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "")") as Any,
+                    .gfmFootnoteID: id,
+                ]))
+            }
+        default:   // reference link / image
+            let target = node.target ?? ""
+            let urlString = target.contains("://") ? target : "https://\(target)"
+            if active {
+                attrs.append((node.contentRange, [.foregroundColor: ctx.theme.link.withAlphaComponent(ctx.config.link.activeLinkAlpha)]))
+            } else if let url = URL(string: urlString) {
+                attrs.append((node.contentRange, [
+                    .link: url, .underlineStyle: NSUnderlineStyle.single.rawValue,
+                    .foregroundColor: ctx.theme.link, .gfmLinkTarget: target,
+                ]))
+            }
+            styleInlines(node.children, font: font, ctx: ctx, into: &attrs)
+        }
+    }
+
     // MARK: - Front matter
 
     /// Quiet metadata: monospaced, dimmed, never parsed for markdown. The source is always shown, so the
@@ -128,11 +175,29 @@ extension MarkdownASTStyler {
     /// Ranges the incomplete-link bracket pass must leave alone (`[!NOTE]` and the like).
     static func gfmExcludedRanges(in blocks: [BlockNode], ns: NSString) -> [NSRange] {
         var out: [NSRange] = []
+        func walk(_ nodes: [InlineNode]) {
+            for node in nodes {
+                switch node {
+                case .ext(let n):
+                    if n.extensionID.hasPrefix(GFMInline.idPrefix) { out.append(n.range) }
+                    walk(n.children)
+                case .emphasis(_, _, _, let children), .link(_, _, _, _, let children): walk(children)
+                default: break
+                }
+            }
+        }
         for block in blocks {
+            switch block {
+            case .paragraph(_, let i), .heading(_, _, _, let i), .blockquote(_, let i), .footnoteDefinition(_, _, let i): walk(i)
+            case .list(_, let items): items.forEach { walk($0.inlines) }
+            default: break
+            }
             if case .blockquote(let range, _) = block, let alert = alertOpening(inBlockquote: range, ns: ns) {
                 out.append(alert.marker)
             }
             if case .frontMatter(let range) = block { out.append(range) }
+            if case .linkDefinition(let range) = block { out.append(range) }
+            if case .footnoteDefinition(_, let marker, _) = block { out.append(marker) }
         }
         return out
     }

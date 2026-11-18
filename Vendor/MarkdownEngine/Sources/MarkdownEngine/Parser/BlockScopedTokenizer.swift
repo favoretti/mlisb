@@ -173,7 +173,7 @@ extension MarkdownTokenizer {
         // parse inlines over their CONTENT only (the fence lines are syntax —
         // a `$x$` in the info string must not become a latex token).
         let inline: [MarkdownToken]
-        if kind == .fencedCode || kind == .frontMatter {  // mlisb: opaque
+        if kind == .fencedCode || kind == .frontMatter || kind == .linkDefinition {  // mlisb: opaque
             inline = []
         } else if case .ext = kind, let block = blockLevel.first {
             let ns = sub as NSString

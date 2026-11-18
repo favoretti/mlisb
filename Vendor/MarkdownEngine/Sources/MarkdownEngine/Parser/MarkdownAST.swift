@@ -47,13 +47,16 @@ indirect enum BlockNode: Equatable {
     case thematicBreak(range: NSRange)
     case blank(range: NSRange)
     case frontMatter(range: NSRange)   // mlisb
+    case linkDefinition(range: NSRange)   // mlisb
+    case footnoteDefinition(range: NSRange, marker: NSRange, inlines: [InlineNode])   // mlisb
     case ext(ExtensionBlockNode)
 
     var range: NSRange {
         switch self {
         case .paragraph(let r, _), .heading(_, let r, _, _), .blockquote(let r, _),
              .list(let r, _), .codeBlock(let r), .blockLatex(let r), .table(let r),
-             .thematicBreak(let r), .blank(let r), .frontMatter(let r):
+             .thematicBreak(let r), .blank(let r), .frontMatter(let r),
+             .linkDefinition(let r), .footnoteDefinition(let r, _, _):
             return r
         case .ext(let node):
             return node.range
@@ -75,6 +78,8 @@ enum DocumentAST {
                       registry: ExtensionRegistry = .empty) -> [BlockNode] {
         let ns = text as NSString
         let blocks = precomputedBlocks ?? BlockParser.parse(text, registry: registry)
+        var registry = registry   // mlisb: inline parsing resolves reference labels against the document's definitions
+        registry.references = ReferenceTable(blocks: blocks, ns: ns)
         let normalizedScopes = scopedRanges.map {
             normalizeScopes($0, documentLength: ns.length)
         }
@@ -192,6 +197,10 @@ enum DocumentAST {
             return .blank(range: block.range)
         case .frontMatter:
             return .frontMatter(range: block.range)
+        case .linkDefinition:
+            return .linkDefinition(range: block.range)
+        case .footnoteDefinition:
+            return footnoteDefinition(block.range, ns, scoped: scoped, registry: registry)
         case .ext(let id):
             return extensionBlock(id: id, range: block.range, ns, scoped: scoped, registry: registry)
         }
@@ -233,6 +242,19 @@ enum DocumentAST {
             inlines: scoped && contentRange.length > 0
                 ? InlineParser.parse(ns, range: contentRange, registry: registry) : []
         ))
+    }
+
+    /// mlisb: `[^id]: text` — the marker is `[^id]:`, the inlines are the text after it.
+    private static func footnoteDefinition(_ range: NSRange, _ ns: NSString, scoped: Bool, registry: ExtensionRegistry) -> BlockNode {
+        guard let found = ReferenceTable.footnoteMarker(in: ns, line: range) else {
+            return .footnoteDefinition(range: range, marker: NSRange(location: range.location, length: 0), inlines: [])
+        }
+        var start = NSMaxRange(found.marker)
+        var end = NSMaxRange(range)
+        while end > start, isLineBreak(ns.character(at: end - 1)) { end -= 1 }
+        while start < end, ns.character(at: start) == space || ns.character(at: start) == tab { start += 1 }
+        return .footnoteDefinition(range: range, marker: found.marker,
+                                   inlines: scoped ? InlineParser.parse(ns, range: NSRange(location: start, length: end - start), registry: registry) : [])
     }
 
     /// mlisb: setext heading — the text lines are the content, the single marker is the underline line

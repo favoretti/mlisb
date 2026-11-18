@@ -27,6 +27,8 @@ enum BlockKind: Equatable {
     case paragraph       // inline-bearing
     case setextHeading   // mlisb: paragraph lines + a `===` / `---` underline line
     case frontMatter     // mlisb: `---` … `---` at the very start of the document — opaque metadata
+    case linkDefinition  // mlisb: `[label]: target "title"` — one line, opaque
+    case footnoteDefinition // mlisb: `[^id]: text` — one line, inline-bearing after the marker
     case heading         // single ATX line (`# …`), inline-bearing content
     case blockquote      // consecutive `>` lines, inline-bearing per line
     case list            // consecutive list-item lines (`-`/`*`/`+` or `1.`/`1)`)
@@ -251,7 +253,7 @@ enum BlockParser {
                 // splice can't merge across the cut, so fall back.
                 // mlisb: a following setext block or `---` line would also merge with it.
                 if winLast + 1 < oldBlocks.count,
-                   [BlockKind.paragraph, .setextHeading, .thematicBreak].contains(oldBlocks[winLast + 1].kind) {
+                   [BlockKind.paragraph, .setextHeading, .thematicBreak, .linkDefinition, .footnoteDefinition].contains(oldBlocks[winLast + 1].kind) {
                     return nil
                 }
             default: break
@@ -384,6 +386,14 @@ enum BlockParser {
                 while end + 1 < lines.count, isListItem(lineText(end + 1)) { end += 1 }
                 blocks.append(Block(kind: .list, range: union(lines[i...end])))
                 i = end + 1
+
+            } else if ReferenceTable.linkDefinition(in: nsText, line: lines[i]) != nil {  // mlisb
+                blocks.append(Block(kind: .linkDefinition, range: lines[i]))
+                i += 1
+
+            } else if ReferenceTable.footnoteMarker(in: nsText, line: lines[i]) != nil {  // mlisb
+                blocks.append(Block(kind: .footnoteDefinition, range: lines[i]))
+                i += 1
 
             } else if i + 1 < lines.count, isTableStart(header: line, delimiter: lineText(i + 1)) {
                 // GFM table: a header row, a `---|---` delimiter row, then data rows (outer pipes optional).

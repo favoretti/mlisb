@@ -740,6 +740,8 @@ extension NativeTextViewCoordinator {
             if BlockParser.isSetextUnderline(line) { isRule = true; stop = true }
         }
         if isRule { return true }
+        // mlisb: a definition line changes how every use of its label renders.
+        if ReferenceTable.touchesDefinition(in: text, range: window) { return true }
         return fences.contains { windowText.contains($0.fence) }
     }
 
@@ -994,6 +996,14 @@ extension NativeTextViewCoordinator {
         // Record that the delegate ran this press, so mouseDown's fallback knows
         // AppKit didn't drop the dispatch.
         (textView as? NativeTextView)?.linkClickDidFire = true
+        // mlisb: a footnote marker moves the caret to its definition.
+        if let id = textView.textStorage?.attribute(.gfmFootnoteID, at: charIndex, effectiveRange: nil) as? String {
+            if let at = ReferenceTable.footnoteDefinitionLocation(id: id, in: textView.string as NSString) {
+                textView.setSelectedRange(NSRange(location: at, length: 0))
+                textView.scrollRangeToVisible(NSRange(location: at, length: 0))
+            }
+            return true
+        }
         // Edit zone: a click on the outer ~30% of a link's first/last visible char places the caret
         // just outside the markers (before '[[' / '[' , after ']]' / ')') to reveal the source for
         // editing instead of navigating. Applies to both wiki links [[…]] and web links [text](url).
@@ -1048,6 +1058,8 @@ extension NativeTextViewCoordinator {
 
     /// mlisb: a markdown link's `(target)` as written, or the text of a bare autolinked URL.
     private func rawLinkTarget(_ textView: NSTextView, at charIndex: Int) -> String? {
+        // mlisb: a reference-style link carries its definition's target.
+        if let raw = textView.textStorage?.attribute(.gfmLinkTarget, at: charIndex, effectiveRange: nil) as? String { return raw }
         let ns = textView.string as NSString
         if let token = parsedDocument(for: textView.string).tokens.first(where: {
             $0.kind == .link && $0.markerRanges.count == 4 && NSLocationInRange(charIndex, $0.range)

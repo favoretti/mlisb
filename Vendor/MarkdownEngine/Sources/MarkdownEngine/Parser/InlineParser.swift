@@ -87,6 +87,17 @@ struct ExtensionInlineNode: Equatable {
     let contentRange: NSRange
     let markers: [NSRange]   // [open, close]
     let children: [InlineNode]
+    /// mlisb: the resolved destination of a `gfm.` reference / link node, as written; nil otherwise.
+    var target: String? = nil
+}
+
+// mlisb: keeps the pre-`target` text for nodes without one (the span-density golden fingerprint hashes it).
+extension ExtensionInlineNode: CustomStringConvertible {
+    var description: String {
+        let base = "MarkdownEngine.ExtensionInlineNode(extensionID: \(String(reflecting: extensionID)), range: \(range), "
+            + "contentRange: \(contentRange), markers: \(markers), children: \(children)"
+        return base + (target.map { ", target: \(String(reflecting: $0))" } ?? "") + ")"
+    }
 }
 
 enum InlineParser {
@@ -157,14 +168,14 @@ enum InlineParser {
         case imageEmbed(range: NSRange, target: NSRange, markers: [NSRange])
         case inlineLatex(range: NSRange, content: NSRange, markers: [NSRange])
         case escape(range: NSRange, character: NSRange, marker: NSRange)
-        case ext(id: String, range: NSRange, contentRange: NSRange, markers: [NSRange], parsesContent: Bool)
+        case ext(id: String, range: NSRange, contentRange: NSRange, markers: [NSRange], parsesContent: Bool, target: String? = nil)
 
         var fullRange: NSRange {
             switch self {
             case .code(let r, _), .emphasis(_, let r, _, _), .link(let r, _, _, _),
                  .image(let r, _, _, _), .wikiLink(let r, _, _, _), .imageEmbed(let r, _, _),
                  .inlineLatex(let r, _, _), .escape(let r, _, _),
-                 .ext(_, let r, _, _, _):
+                 .ext(_, let r, _, _, _, _):
                 return r
             }
         }
@@ -313,10 +324,13 @@ enum InlineParser {
         // needs the full overlap list; everything else short-circuits on the
         // first one.
         func hasDisallowedClaimedOverlap(_ span: Span) -> Bool {
-            guard case .link(_, let textRange, _, _) = span else {
-                return claimed.overlaps(span.fullRange)
+            let labelRange: NSRange
+            switch span {
+            case .link(_, let textRange, _, _): labelRange = textRange
+            case .ext(GFMInline.refID, _, let contentRange, _, _, _): labelRange = contentRange   // mlisb
+            default: return claimed.overlaps(span.fullRange)
             }
-            return claimed.overlapping(span.fullRange).contains { !rangeContains(textRange, $0) }
+            return claimed.overlapping(span.fullRange).contains { !rangeContains(labelRange, $0) }
         }
         var spans: [Span] = []
         var i = 0
@@ -335,6 +349,10 @@ enum InlineParser {
 
     private static func matchClaimedSpan(_ ns: NSString, _ len: Int, at i: Int, registry: ExtensionRegistry) -> Span? {
         if let span = matchBuiltIn(ns, len, at: i) { return span }
+        if let m = GFMInline.match(ns, len, at: i, registry: registry) {  // mlisb
+            return .ext(id: m.id, range: m.range, contentRange: m.contentRange, markers: m.markers,
+                        parsesContent: m.parsesContent, target: m.target)
+        }
         // Directives (`@font(size: 18){…}`) match after every built-in and
         // BEFORE the extension loop below, on the same terms as extension
         // spans: registered names only, and a rejection leaves the candidate
@@ -797,10 +815,11 @@ enum InlineParser {
                 result.append(.inlineLatex(range: range, content: content, markers: markers))
             case .escape(let range, let character, let marker):
                 result.append(.escape(range: range, character: character, marker: marker))
-            case .ext(let id, let range, let contentRange, let markers, let parsesContent):
+            case .ext(let id, let range, let contentRange, let markers, let parsesContent, let target):
                 result.append(.ext(ExtensionInlineNode(
                     extensionID: id, range: range, contentRange: contentRange, markers: markers,
-                    children: parsesContent ? reparse(contentRange, ns: ns, registry: registry, cost: &cost) : []
+                    children: parsesContent ? reparse(contentRange, ns: ns, registry: registry, cost: &cost) : [],
+                    target: target
                 )))
             }
             // Every span but emphasis is opaque, so nothing should remain
@@ -845,7 +864,7 @@ enum InlineParser {
         case .escape(let r, let c, let m): return .escape(range: s(r), character: s(c), marker: s(m))
         case .ext(let n): return .ext(ExtensionInlineNode(
             extensionID: n.extensionID, range: s(n.range), contentRange: s(n.contentRange),
-            markers: n.markers.map(s), children: offsetNodes(n.children, by: d)))
+            markers: n.markers.map(s), children: offsetNodes(n.children, by: d), target: n.target))
         }
     }
 

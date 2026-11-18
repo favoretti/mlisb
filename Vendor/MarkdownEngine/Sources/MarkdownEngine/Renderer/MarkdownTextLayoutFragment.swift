@@ -33,6 +33,10 @@ extension NSAttributedString.Key {
     static let blockquoteBarColor = NSAttributedString.Key("BlockquoteBarColor")
     /// mlisb: String — title drawn in bold, in the line's bar colour, over a hidden `[!NOTE]` marker.
     static let alertTitle = NSAttributedString.Key("AlertTitle")
+    /// mlisb: String — raw destination of a reference-style link, offered to `onOpenLink` on click.
+    static let gfmLinkTarget = NSAttributedString.Key("GFMLinkTarget")
+    /// mlisb: String — id of a footnote reference; a click moves the caret to its definition.
+    static let gfmFootnoteID = NSAttributedString.Key("GFMFootnoteID")
     /// Marks a bullet-list marker char (`-`/`*`/`+`) whose glyph is hidden so
     /// the fragment can paint a `•` in its place. Set to `true`.
     static let bulletMarker = NSAttributedString.Key("BulletListMarker")
