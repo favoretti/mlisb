@@ -4,12 +4,13 @@ struct WorkspaceView: View {
     @Binding var root: URL?
     @State private var document: Document?
     @State private var folder: FolderModel?
+    @State private var nav = NavState()
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Group {
             if let folder {
-                FolderView(model: folder)
+                FolderView(model: folder, nav: nav).id(folder.root)
             } else if let document {
                 EditorPane(document: document)
             } else {
@@ -30,12 +31,23 @@ struct WorkspaceView: View {
             allowing: root.map { [$0.absoluteString] } ?? ["*"])
         .onOpenURL(perform: open)
         .focusedSceneValue(\.workspaceRoot, $root)
+        .focusedSceneValue(\.nav, nav)
+        .overlay(alignment: .top) {
+            if nav.quickOpen {
+                let open = folder?.document ?? document
+                QuickOpenView(
+                    nav: nav, root: folder?.root, headings: open.map { Outline.headings(in: $0.text) } ?? [],
+                    openFile: { _ = folder?.show($0) },
+                    goTo: { range in if let open { LineRequests.shared.pending = LineRequest(file: open.url, range: range) } })
+            }
+        }
         .onChange(of: root, initial: true) { _, root in
             document = nil
             folder = nil
+            nav.hasFolder = false
             guard let root else { return }
             Access.shared.begin(root)
-            if FS.isDir(root) { folder = FolderModel(root: root) } else { document = Document(url: root) }
+            if FS.isDir(root) { folder = FolderModel(root: root); nav.hasFolder = true } else { document = Document(url: root) }
             showRequestedFile()
         }
         .onChange(of: LineRequests.shared.pending) { showRequestedFile() }
@@ -59,15 +71,34 @@ struct WorkspaceView: View {
 
 private struct FolderView: View {
     @Bindable var model: FolderModel
+    let nav: NavState
+    @State private var search: SearchModel
+    @State private var visibility = NavigationSplitViewVisibility.automatic
+
+    init(model: FolderModel, nav: NavState) {
+        self.model = model
+        self.nav = nav
+        _search = State(initialValue: SearchModel(root: model.root))
+    }
 
     var body: some View {
-        NavigationSplitView {
-            List(selection: $model.selection) {
-                ForEach(model.children[model.root] ?? [], id: \.url) { RowView(entry: $0, model: model) }
+        NavigationSplitView(columnVisibility: $visibility) {
+            Group {
+                if search.query.isEmpty {
+                    List(selection: $model.selection) {
+                        ForEach(model.children[model.root] ?? [], id: \.url) { RowView(entry: $0, model: model) }
+                    }
+                    .dropDestination(for: URL.self) { urls, _ in model.move(urls, into: model.root); return true }
+                    .contextMenu(forSelectionType: URL.self) { menu($0.first) }
+                } else {
+                    SearchResultsView(search: search) { url, range in
+                        if model.show(url) { LineRequests.shared.pending = LineRequest(file: url, range: range) }
+                    }
+                }
             }
-            .dropDestination(for: URL.self) { urls, _ in model.move(urls, into: model.root); return true }
-            .contextMenu(forSelectionType: URL.self) { menu($0.first) }
+            .safeAreaInset(edge: .top, spacing: 0) { SidebarSearchField(search: search, nav: nav) }
             .navigationSplitViewColumnWidth(min: 180, ideal: 240)
+            .onChange(of: nav.searchRequest) { visibility = .all }
         } detail: {
             if let document = model.document {
                 EditorPane(document: document, showInWorkspace: model.show).id(document.url)

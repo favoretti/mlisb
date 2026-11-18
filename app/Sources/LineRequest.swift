@@ -5,8 +5,16 @@ import Observation
 struct LineRequest: Equatable {
     let file: URL
     let line: Int
+    /// A character range to select instead of the line's start.
+    var range: NSRange?
     /// Distinguishes a repeat of the same request.
     let id = UUID()
+
+    init(file: URL, range: NSRange) {
+        self.file = file
+        self.range = range
+        line = 1
+    }
 
     /// Parses `mlisb://line?file=<absolute path>&line=<n>`; anything malformed is ignored.
     init?(url: URL) {
@@ -29,6 +37,14 @@ struct LineRequest: Equatable {
             location = end
         }
         return location
+    }
+
+    /// What to select in `text`: the range, kept inside the text, or the start of the line.
+    func selection(in text: String) -> NSRange {
+        guard let range else { return NSRange(location: Self.offset(ofLine: line, in: text), length: 0) }
+        let length = (text as NSString).length
+        let location = min(range.location, length)
+        return NSRange(location: location, length: min(range.length, length - location))
     }
 
     func matches(_ other: URL) -> Bool { file.standardizedFileURL.path == other.standardizedFileURL.path }

@@ -17,6 +17,7 @@ mlisb is aimed at AI-assisted development, where repositories are full of `.md` 
 - Autosave 1 second after typing stops. Silent reload when the file changes on disk. If both changed, a "Keep Mine / Load Theirs" banner appears.
 - Folder sidebar: new file or folder, rename, drag to move, move to Trash, reveal in Finder, and Quick Look preview for images and PDFs.
 - Table of contents, find, and a Format menu.
+- Find in Folder (⇧⌘F) searches every Markdown file in the sidebar. Open Quickly (⇧⌘O) jumps to a file, a heading or any menu command. The inspector's Problems tab (⇧⌘M) lists broken links, anchors, tables and fences.
 - Links to other Markdown files open in the app. `#anchor` links jump to the heading.
 - Local images, and Open Recent.
 - Export to HTML, PDF, JPEG and ePub. Copy as plain text, rich text, Markdown or HTML.

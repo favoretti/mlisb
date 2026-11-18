@@ -8,6 +8,7 @@ struct MlisbApp: App {
     @AppStorage("sourceMode") private var sourceMode = false
     @AppStorage("showOutline") private var showOutline = false
     @AppStorage("textSize") private var textSize = ReadingSettings.defaultSize
+    @AppStorage("inspectorTab") private var inspectorTab = InspectorTab.contents
 
 #if canImport(Sparkle)
     @StateObject private var updater = UpdaterModel()
@@ -29,7 +30,8 @@ struct MlisbApp: App {
             }
             CommandGroup(before: .sidebar) {
                 Toggle("Source Mode", isOn: $sourceMode).keyboardShortcut("/")
-                Toggle("Table of Contents", isOn: $showOutline).keyboardShortcut("t", modifiers: [.command, .shift])
+                Toggle("Table of Contents", isOn: Binding(
+                    get: { showOutline }, set: { showOutline = $0; if $0 { inspectorTab = .contents } })).keyboardShortcut("t", modifiers: [.command, .shift])
                 Divider()
                 Button("Bigger") { textSize = ReadingSettings.step(textSize, by: 1) }.keyboardShortcut("+")
                 Button("Smaller") { textSize = ReadingSettings.step(textSize, by: -1) }.keyboardShortcut("-")
@@ -38,6 +40,7 @@ struct MlisbApp: App {
             }
             SidebarCommands()
             FormatCommands()
+            NavigationCommands()
             ReviewCommands()
             ExportCommands()
         }

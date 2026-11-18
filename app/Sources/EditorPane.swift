@@ -29,7 +29,7 @@ struct EditorPane: View {
             }
         }
         .inspector(isPresented: $showOutline) {
-            OutlineView(headings: Outline.headings(in: document.text), jump: jump)
+            InspectorView(document: document, jump: jump)
                 .inspectorColumnWidth(min: 160, ideal: 220, max: 400)
         }
         .toolbar {
@@ -101,7 +101,7 @@ struct EditorPane: View {
                 if let textView = textViews.first(where: { $0.string == document.text && !document.text.isEmpty })
                     ?? NSApp.keyWindow?.contentView?.editorTextView(),
                    !textView.string.isEmpty || document.text.isEmpty {
-                    let at = NSRange(location: LineRequest.offset(ofLine: request.line, in: textView.string), length: 0)
+                    let at = request.selection(in: textView.string)
                     textView.window?.makeFirstResponder(textView)
                     textView.setSelectedRange(at)
                     // The text is laid out lazily; lay it all out so the target has a position to scroll to.
