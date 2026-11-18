@@ -34,7 +34,7 @@ Re-run `xcodegen generate` after adding or removing source files. Local builds a
 
 ## Tests
 
-- App: `cd app && xcodebuild -project mlisb.xcodeproj -scheme mlisb -derivedDataPath .build/xcode test`. 17 tests, run inside the sandboxed app.
+- App: `cd app && xcodebuild -project mlisb.xcodeproj -scheme mlisb -derivedDataPath .build/xcode test`. 18 tests, run inside the sandboxed app.
 - Kit: `cd Kit && swift test`. 16 tests (diagram rendering, export).
 - Engine: `cd Vendor/MarkdownEngine && swift test`. 690 tests. One upstream test, `MarkdownHTMLRendererTests` ("bare URLs and emails autolink"), fails on macOS 27. It is unrelated to our changes.
 
@@ -52,11 +52,30 @@ To install, choose **mlisb → Install Command Line Tool…**. The menu shows th
 sudo mkdir -p /usr/local/bin && sudo ln -sf '<path to mlisb.app>/Contents/Resources/bin/mlisb' /usr/local/bin/mlisb
 ```
 
+## Updates
+
+mlisb updates itself with [Sparkle](https://sparkle-project.org) 2.10.0 (pinned exactly). The feed is `https://github.com/favoretti/mlisb/releases/latest/download/appcast.xml`. Updates are verified with the EdDSA public key in `SUPublicEDKey`. The updater only starts when the bundle has both `SUFeedURL` and `SUPublicEDKey`. Controls: **mlisb → Check for Updates…** and **Settings (⌘,) → Updates**.
+
+The app is sandboxed, so `project.yml` adds what Sparkle's [sandboxing guide](https://sparkle-project.org/documentation/sandboxing/) requires: `SUEnableInstallerLauncherService` in Info.plist, and the `com.apple.security.temporary-exception.mach-lookup.global-name` entitlement with `$(PRODUCT_BUNDLE_IDENTIFIER)-spks` and `-spki`. The downloader service stays off because the app has `com.apple.security.network.client`.
+
+Release builds must sign these inside `Sparkle.framework`, each with Hardened Runtime (`-o runtime`), in this order, and never with `--deep`:
+
+1. `Versions/B/XPCServices/Installer.xpc`
+2. `Versions/B/XPCServices/Downloader.xpc`, with `--preserve-metadata=entitlements`. Or delete it, since it is unused here.
+3. `Versions/B/Autoupdate`
+4. `Versions/B/Updater.app`
+5. `Sparkle.framework` itself
+
+Then sign the app. Xcode's Archive and Export does all of this by itself.
+
+Mac App Store variant (the store forbids self-updating): in `app/project.yml` drop the `Sparkle:` entry under `packages`, the `- package: Sparkle` dependency, the four `SU…` Info.plist keys, and the `mach-lookup.global-name` entitlement with its two entries. Then run `xcodegen generate`. All updater code is wrapped in `#if canImport(Sparkle)`, so it compiles away, along with the Settings window and the menu item.
+
 ## Keyboard shortcuts
 
 | Shortcut | Action |
 | --- | --- |
 | ⌘O | Open |
+| ⌘, | Settings |
 | ⌘/ | Source mode |
 | ⇧⌘T | Table of contents |
 | ⌘F | Find |

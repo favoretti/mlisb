@@ -6,6 +6,10 @@ struct MlisbApp: App {
     @AppStorage("sourceMode") private var sourceMode = false
     @AppStorage("showOutline") private var showOutline = false
 
+#if canImport(Sparkle)
+    @StateObject private var updater = UpdaterModel()
+#endif
+
     var body: some Scene {
         // The window's value is its workspace root: a folder or a single file.
         WindowGroup(for: URL.self) { $root in
@@ -15,6 +19,9 @@ struct MlisbApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { OpenCommand() }
             CommandGroup(after: .appInfo) {
+#if canImport(Sparkle)
+                CheckForUpdatesCommand(updater: updater)
+#endif
                 Button("Install Command Line Tool…") { showInstallCommandLineTool() }
             }
             CommandGroup(before: .sidebar) {
@@ -25,6 +32,9 @@ struct MlisbApp: App {
             FormatCommands()
             ExportCommands()
         }
+#if canImport(Sparkle)
+        Settings { SettingsView(updater: updater) }
+#endif
     }
 }
 

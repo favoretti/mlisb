@@ -16,6 +16,9 @@ packages:
     path: ../Vendor/MarkdownEngine
   MlisbKit:
     path: ../Kit
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
 targets:
   mlisb:
     type: application
@@ -34,6 +37,7 @@ targets:
       - package: MarkdownEngine
         product: MarkdownEngineCodeBlocks
       - package: MlisbKit
+      - package: Sparkle
       - target: mlisbQuickLook
       - target: mlisbThumbnail
     scheme:
@@ -54,6 +58,10 @@ targets:
             CFBundleTypeRole: Editor
             LSHandlerRank: Alternate
             LSItemContentTypes: [public.folder]
+        SUFeedURL: https://github.com/favoretti/mlisb/releases/latest/download/appcast.xml
+        SUPublicEDKey: hKvkZpU81lRfsYqGs/00iTPCBd6PQcYIYPAa4Z3qqTg=
+        SUEnableAutomaticChecks: true
+        SUEnableInstallerLauncherService: true
     entitlements:
       path: mlisb.entitlements
       properties:
@@ -62,6 +70,9 @@ targets:
         com.apple.security.files.bookmarks.app-scope: true
         # WebKit's helper processes die without this, even for local content.
         com.apple.security.network.client: true
+        com.apple.security.temporary-exception.mach-lookup.global-name:
+          - $(PRODUCT_BUNDLE_IDENTIFIER)-spks
+          - $(PRODUCT_BUNDLE_IDENTIFIER)-spki
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(MLISB_BUNDLE_ID)
