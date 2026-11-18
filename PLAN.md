@@ -101,12 +101,23 @@ RenderService: one hidden WKWebView for the whole app, never visible
 - **Distribution**: needs an Apple Developer Program membership under favoretti.
 
 ## Status (2026-11-18)
-Working: live/source editing, mermaid + d2, sidebar with file management and Quick Look,
-table of contents, find, Format menu, local links and images, `mlisb` CLI, autosave and
-reload, sandbox bookmarks and Open Recent.
-Not done yet: remote images, formatting bar over the selection (menu and shortcuts only),
-underline, image drop into `./assets/`, current-section highlight in the table of contents,
-math, App Store signing and listing. See also "Gaps against GFM" above.
+Working:
+- Editing: live and source views, mermaid, d2, math, code highlighting, Format menu, find.
+- Reviewing: marks for what changed since the last review (added, rewritten, removed), next and
+  previous change, Mark Reviewed, local version history with compare and restore.
+- Navigating: folder sidebar with file management and Quick Look, table of contents, search
+  across the folder, Open Quickly (files, headings, every menu command), a Problems list.
+- Files: autosave, silent reload, conflict banner, links between documents, local images,
+  export (HTML, PDF, JPEG, ePub) and copy-as, Open Recent, sandbox bookmarks.
+- System: Quick Look preview, `mlisb` CLI (open at a line, the agent hook), settings for text
+  size and line width, built-in updater, release script and workflow.
+
+Not done or not verified:
+- Finder thumbnails are built but the system did not pick them up in a development build.
+- The updater has never installed a real update; signing with a Developer ID, notarization and
+  the release workflow have not been run.
+- Remote images, a formatting bar over the selection, underline, image drop into `./assets/`.
+- See "Gaps against GFM" above for rendering differences still open.
 
 ## Milestones
 0. **Spike (go/no-go on the engine)**: put MarkdownEngine in a bare app and open real
