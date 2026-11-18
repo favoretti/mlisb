@@ -79,6 +79,13 @@ import XCTest
         XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "theirs\n")
         document.resolveConflict(keepMine: true)
         XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "mine\n")
+
+        // Saving right after an external write, before the watcher has reported it.
+        document.text = "mine again\n"
+        try Data("agent\n".utf8).write(to: url)
+        document.save()
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "agent\n")
+        XCTAssertEqual(document.conflictingDiskText, "agent\n")
     }
 
     func testInvalidUTF8IsReadOnlyAndNeverSaved() throws {

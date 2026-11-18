@@ -60,6 +60,8 @@ import Observation
     func save() {
         saveTask?.cancel()
         guard !isReadOnly, conflictingDiskText == nil, text != diskText else { return }
+        // The watcher can lag behind a write; never save over a change we haven't seen.
+        if let onDisk = try? Self.read(url), onDisk != diskText { return diskChanged() }
         do {
             // Written in place (not atomically) to keep the inode, permissions and
             // symlinks, and because a single-file sandbox grant can't create a sibling.
