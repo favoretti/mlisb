@@ -48,7 +48,13 @@ If you were typing when the file changed, a banner lets you keep your version or
 
 ## Setting up
 
-Open **mlisb → Settings** (⌘,) and look under **Setup**:
+Open **mlisb → Settings** (⌘,). Under **General**:
+
+- **Reopen windows from last time.** On by default, so the app comes back as you left it.
+- **Open files in** a new tab or a new window.
+- **Show tabs** across the top, or as a list down the left side.
+
+Under **Setup**:
 
 - **Default app for Markdown files.** Make Default opens every Markdown file with mlisb.
 - **Command line tool.** Shows where the `mlisb` command is installed, or how to install it.

@@ -7,26 +7,19 @@ struct WorkspaceView: View {
     @State private var nav = NavState()
     @Environment(\.openWindow) private var openWindow
     @AppStorage("openIn") private var openIn = OpenIn.tab
+    @AppStorage("tabLayout") private var tabLayout = TabLayout.top
+    @State private var tabs = WindowTabs()
 
     var body: some View {
-        Group {
-            if let folder {
-                FolderView(model: folder, nav: nav).id(folder.root)
-            } else if let document {
-                EditorPane(document: document)
-            } else {
-                ContentUnavailableView {
-                    Label("mlisb", systemImage: "doc.richtext")
-                } description: {
-                    Text("Start a new document, or open a Markdown file or a folder.")
-                } actions: {
-                    Button("New Document…") { if let url = createNewDocument() { root = url } }
-                    Button("Open…") { root = chooseFilesOrFolders().first }
-                }
+        HStack(spacing: 0) {
+            if tabLayout == .left {
+                TabStrip(tabs: tabs)
+                Divider()
             }
+            content
         }
         .navigationTitle(root?.lastPathComponent ?? "mlisb")
-        .background(WindowTabbing(openIn: openIn))
+        .background(WindowLink(openIn: openIn, layout: tabLayout, root: root, tabs: tabs))
         // Files opened from Finder or the CLI go to the window already showing them
         // (or their folder); an empty window takes anything.
         .handlesExternalEvents(
@@ -54,6 +47,26 @@ struct WorkspaceView: View {
             showRequestedFile()
         }
         .onChange(of: LineRequests.shared.pending) { showRequestedFile() }
+    }
+
+    @ViewBuilder private var content: some View {
+        Group {
+            if let folder {
+                FolderView(model: folder, nav: nav).id(folder.root)
+            } else if let document {
+                EditorPane(document: document)
+            } else {
+                ContentUnavailableView {
+                    Label("mlisb", systemImage: "doc.richtext")
+                } description: {
+                    Text("Start a new document, or open a Markdown file or a folder.")
+                } actions: {
+                    Button("New Document…") { if let url = createNewDocument() { root = url } }
+                    Button("Open…") { root = chooseFilesOrFolders().first }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// A folder window selects the file a line request names; the editor then takes the request.

@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("lineWidth") private var lineWidth = LineWidth.medium
     @State private var reopensWindows = Session.reopensWindows
     @AppStorage("openIn") private var openIn = OpenIn.tab
+    @AppStorage("tabLayout") private var tabLayout = TabLayout.top
 
     var body: some View {
         Form {
@@ -18,6 +19,9 @@ struct SettingsView: View {
                     ForEach(OpenIn.allCases) { Text($0.label).tag($0) }
                 }
                 .onChange(of: openIn) { OpenIn.apply() }
+                Picker("Show tabs", selection: $tabLayout) {
+                    ForEach(TabLayout.allCases) { Text($0.label).tag($0) }
+                }
             }
             Section("Reading") {
                 LabeledContent("Text size") {

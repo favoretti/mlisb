@@ -72,16 +72,3 @@ enum OpenIn: String, CaseIterable, Identifiable {
         self == .tab ? .preferred : NSWindow.userTabbingPreference == .always ? .disallowed : .automatic
     }
 }
-
-/// Applies the tab-or-window choice to the window it sits in.
-struct WindowTabbing: NSViewRepresentable {
-    let openIn: OpenIn
-
-    func makeNSView(context: Context) -> Probe { Probe() }
-    func updateNSView(_ view: Probe, context: Context) { view.openIn = openIn }
-
-    final class Probe: NSView {
-        var openIn = OpenIn.current { didSet { window?.tabbingMode = openIn.tabbingMode } }
-        override func viewDidMoveToWindow() { window?.tabbingMode = openIn.tabbingMode }
-    }
-}

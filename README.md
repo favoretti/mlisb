@@ -111,7 +111,8 @@ Tool…** and run the one line it shows. `mlisb hook install` adds one hook to
   links, strikethrough, autolinks and a safe subset of HTML.
 - **Wide tables** spread into the free space beside the text before they wrap tightly or scroll.
 - **Saves by itself**, one second after you stop typing, in place.
-- **Tabs or windows.** A setting decides whether a newly opened file becomes a tab or its own window.
+- **Tabs your way.** A newly opened file becomes a tab or its own window, and the tabs sit across the
+  top or in a list down the left side. Both are settings.
 - **Comes back as you left it.** The windows you had open reopen at launch, including after an
   update. A switch in Settings turns this off.
 - **Export** to HTML, PDF, JPEG and ePub. **Copy as** plain text, rich text, Markdown or HTML.
