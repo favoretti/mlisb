@@ -18,6 +18,22 @@ struct RenderTests {
         check(try await service.render(.mermaid, source: "flowchart LR\n A[Start] --> B{Ok?}\n B --> C[Done]", theme: .light))
     }
 
+    /// Labels with line breaks, edge labels and class styles: drawn as SVG text, not HTML that would
+    /// make the output unreadable as XML.
+    @Test func mermaidLabelsWithLineBreaks() async throws {
+        let source = """
+        flowchart LR
+          a["one<br/>two"] --> b{"three<br>four"}
+          b -- "yes" --> c["five"]
+          classDef ok fill:#e6f4ea,stroke:#34a853,color:#111;
+          class c ok;
+        """
+        let d = try await service.render(.mermaid, source: source, theme: .dark)
+        check(d)
+        #expect(!d.svg.contains("foreignObject"))
+        #expect(d.svg.contains("one") && d.svg.contains("two") && d.svg.contains("four"))
+    }
+
     @Test func mermaidSequence() async throws {
         check(try await service.render(.mermaid, source: "sequenceDiagram\n Alice->>Bob: Hi\n Bob-->>Alice: Hello", theme: .light))
     }

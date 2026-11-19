@@ -32,7 +32,10 @@ async function renderMermaid(source, theme) {
     suppressErrorRendering: true,
     theme: theme === 'dark' ? 'dark' : 'default',
     fontFamily: FONT,
-    flowchart: { htmlLabels: false, useMaxWidth: false },
+    // SVG text, not HTML in foreignObject: a PDF or image of the diagram keeps its labels.
+    // Mermaid 12 reads this at the top level and ignores `flowchart.htmlLabels`.
+    htmlLabels: false,
+    flowchart: { htmlLabels: false, useMaxWidth: false, wrappingWidth: 220 },
     sequence: { useMaxWidth: false },
   });
   const host = document.createElement('div');
@@ -55,9 +58,10 @@ async function renderD2(source, theme) {
 
 // Natural size from the viewBox; both renderers otherwise emit fit-to-width SVG.
 function normalize(svgText) {
-  const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
-  const svg = doc.documentElement;
-  if (svg.localName !== 'svg') throw new Error('renderer did not produce an SVG');
+  // The HTML parser, not the XML one: a renderer's markup need not be well-formed XML (an unclosed
+  // <br> in a label), and the serializer below writes it back out as XML.
+  const svg = new DOMParser().parseFromString(svgText, 'text/html').querySelector('svg');
+  if (!svg) throw new Error('renderer did not produce an SVG');
   const [, , w, h] = svg.getAttribute('viewBox').split(/[\s,]+/).map(Number);
   svg.setAttribute('width', w);
   svg.setAttribute('height', h);

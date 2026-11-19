@@ -6,8 +6,15 @@ What changed in each released version of mlisb, newest first. The format follows
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.11] - 2026-11-19
+
 ### Fixed
 
+- A Mermaid diagram with a line break in a label (`<br/>`) draws instead of failing with "renderer
+  did not produce an SVG", and labels break where you put the line breaks, not in the middle of a
+  word.
 - HTML export and **Copy as HTML** link an address written as `www.…` to `http://`, as GitHub does;
   on macOS 27 it became `https://`.
 
@@ -148,7 +155,8 @@ First release.
 - Settings for text size and line width.
 - Automatic updates, a Homebrew cask, and third-party license notices in the About window.
 
-[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.10...HEAD
+[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.11...HEAD
+[0.1.11]: https://github.com/favoretti/mlisb/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/favoretti/mlisb/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/favoretti/mlisb/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/favoretti/mlisb/compare/v0.1.7...v0.1.8
