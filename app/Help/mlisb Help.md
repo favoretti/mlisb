@@ -52,7 +52,7 @@ If you were typing when the file changed, a banner lets you keep your version or
 
 Open **mlisb → Settings** (⌘,). Under **General**:
 
-- **Reopen windows from last time.** On by default, so the app comes back as you left it.
+- **Reopen windows from last time.** On by default, so the app comes back as you left it. While the windows reopen, they say so; a tab you have not looked at yet loads its document when you first switch to it.
 - **Open files in** a new tab or a new window.
 - **Show tabs** across the top, or as a list down the left side. Drag the list's right edge to make it wider or narrower.
 

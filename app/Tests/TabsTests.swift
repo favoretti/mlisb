@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 @testable import mlisb
 
@@ -52,5 +53,35 @@ import XCTest
         XCTAssertEqual(URL(fileURLWithPath: home + "/notes/a.md").displayPath, "~/notes/a.md")
         XCTAssertEqual(URL(fileURLWithPath: "/usr/share/doc/x.md").displayPath, "/usr/share/doc/x.md")
         XCTAssertEqual(URL(fileURLWithPath: home + "other/x.md").displayPath, home + "other/x.md")
+    }
+
+    /// A tab in the background builds its editor only when it is shown.
+    func testABackgroundTabBuildsItsEditorWhenSelected() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tabs-\(UUID())")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        func window(_ name: String) throws -> NSWindow {
+            let url = dir.appendingPathComponent(name)
+            try Data("# \(name)\n".utf8).write(to: url)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 400),
+                                  styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.tabbingMode = .preferred
+            window.contentView = NSHostingView(rootView: WorkspaceView(root: .constant(url)))
+            return window
+        }
+        let (a, b) = (try window("a.md"), try window("b.md"))
+        defer { b.close(); a.close() }
+        a.orderFront(nil)
+        a.addTabbedWindow(b, ordered: .above)
+        a.tabGroup?.selectedWindow = a
+        func settle() async throws { for _ in 0..<20 { try await Task.sleep(for: .milliseconds(50)) } }
+        try await settle()
+        XCTAssertNotNil(a.contentView?.editorTextView())
+        XCTAssertNil(b.contentView?.editorTextView(), "a background tab builds no editor")
+
+        a.tabGroup?.selectedWindow = b
+        try await settle()
+        XCTAssertNotNil(b.contentView?.editorTextView(), "selecting the tab builds its editor")
     }
 }

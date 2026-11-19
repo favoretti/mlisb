@@ -14,16 +14,19 @@ import Observation
         // shortcut: bookmarks are never pruned; cap the dictionary if it grows large.
         var saved = UserDefaults.standard.dictionary(forKey: "bookmarks") as? [String: Data] ?? [:]
         var stale = false
-        if let data = saved[url.path],
-           let resolved = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, bookmarkDataIsStale: &stale) {
-            _ = resolved.startAccessingSecurityScopedResource()
+        var resolved: URL?
+        if let data = saved[url.path] {
+            resolved = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, bookmarkDataIsStale: &stale)
+            _ = resolved?.startAccessingSecurityScopedResource()
         }
-        if let data = try? url.bookmarkData(options: .withSecurityScope) {
+        if resolved == nil || stale, let data = try? url.bookmarkData(options: .withSecurityScope) {
             saved[url.path] = data
             UserDefaults.standard.set(saved, forKey: "bookmarks")
         }
         NSDocumentController.shared.noteNewRecentDocumentURL(url)
-        recents = NSDocumentController.shared.recentDocumentURLs
+        // Reading the list back waits on another process; every restored window would pay for it.
+        let limit = NSDocumentController.shared.maximumRecentDocumentCount
+        recents = Array(([url] + recents.filter { $0.standardizedFileURL != url.standardizedFileURL }).prefix(limit))
     }
 
     func clearRecents() {

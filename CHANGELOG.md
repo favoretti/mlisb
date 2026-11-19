@@ -8,6 +8,20 @@ What changed in each released version of mlisb, newest first. The format follows
 
 Nothing yet.
 
+## [0.1.10] - 2026-11-19
+
+### Changed
+
+- Reopening many tabs at launch is faster: a tab in the background builds its editor when you first
+  switch to it, and all editors share one syntax highlighter. With 17 tabs, every tab has its file
+  after about 4 seconds instead of 7.
+- While last time's windows reopen, a window shows "Reopening documents…" instead of offering a new
+  document, and the tabs stay unnamed until their files arrive instead of all reading "mlisb".
+
+### Fixed
+
+- With tabs down the left side, the system's tab bar no longer flashes across the top at launch.
+
 ## [0.1.9] - 2026-11-19
 
 ### Changed
@@ -131,7 +145,8 @@ First release.
 - Settings for text size and line width.
 - Automatic updates, a Homebrew cask, and third-party license notices in the About window.
 
-[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.10...HEAD
+[0.1.10]: https://github.com/favoretti/mlisb/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/favoretti/mlisb/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/favoretti/mlisb/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/favoretti/mlisb/releases/tag/v0.1.7

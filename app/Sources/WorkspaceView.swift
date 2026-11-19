@@ -9,6 +9,10 @@ struct WorkspaceView: View {
     @AppStorage("openIn") private var openIn = OpenIn.tab
     @AppStorage("tabLayout") private var tabLayout = TabLayout.top
     @State private var tabs = WindowTabs()
+    /// Set the first time the window is shown. Restored tabs in the background wait for it: building
+    /// every tab's editor at once held the first frame of a large session back for seconds.
+    @State private var wasShown = false
+    private var reopening: Reopening { .shared }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -18,8 +22,8 @@ struct WorkspaceView: View {
             }
             content
         }
-        .navigationTitle((folder?.document?.url ?? root)?.displayPath ?? "mlisb")
-        .background(WindowLink(openIn: openIn, layout: tabLayout, root: root, tabs: tabs))
+        .navigationTitle((folder?.document?.url ?? root)?.displayPath ?? (reopening.isActive ? "" : "mlisb"))
+        .background(WindowLink(openIn: openIn, layout: tabLayout, root: root, reopening: reopening.isActive, tabs: tabs))
         // Files opened from Finder or the CLI go to the window already showing them
         // (or their folder); an empty window takes anything.
         .handlesExternalEvents(
@@ -38,6 +42,7 @@ struct WorkspaceView: View {
             }
         }
         .onChange(of: root, initial: true) { _, root in
+            if root == nil { reopening.waiting(tabs) } else { reopening.arrived(tabs) }
             document = nil
             folder = nil
             nav.hasFolder = false
@@ -51,7 +56,14 @@ struct WorkspaceView: View {
 
     @ViewBuilder private var content: some View {
         Group {
-            if let folder {
+            if folder == nil, document == nil, reopening.isActive {
+                VStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text("Reopening documents…").foregroundStyle(.secondary)
+                }
+            } else if !wasShown {
+                Color.clear
+            } else if let folder {
                 FolderView(model: folder, nav: nav).id(folder.root)
             } else if let document {
                 EditorPane(document: document)
@@ -67,6 +79,8 @@ struct WorkspaceView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: tabs.isShown, initial: true) { _, shown in if shown { wasShown = true } }
+        .onDisappear { reopening.closed(tabs) }
     }
 
     /// A folder window selects the file a line request names; the editor then takes the request.

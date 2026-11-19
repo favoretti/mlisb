@@ -20,9 +20,11 @@ enum TabLayout: String, CaseIterable, Identifiable {
 
     private(set) var tabs: [Tab] = []
     private(set) var selected: ObjectIdentifier?
+    /// Whether this window is on screen. A tab in the background is a window that is not.
+    private(set) var isShown = false
     @ObservationIgnored weak var window: NSWindow?
-    /// What each window shows, so a tab can say whether it is a folder.
-    @ObservationIgnored fileprivate static let roots = NSMapTable<NSWindow, NSURL>.weakToStrongObjects()
+    /// The windows that show a folder, so a tab can say so without asking the disk on every update.
+    @ObservationIgnored fileprivate static let folders = NSHashTable<NSWindow>.weakObjects()
 
     /// `tabbedWindows` and not `tabGroup`: reading `tabGroup` creates a group, and a window that already
     /// has one of its own is no longer added to another window's tabs.
@@ -31,11 +33,13 @@ enum TabLayout: String, CaseIterable, Identifiable {
     func refresh() {
         let now = windows.map { window in
             Tab(id: ObjectIdentifier(window), title: window.tab.title,
-                isFolder: Self.roots.object(forKey: window).map { FS.isDir($0 as URL) } ?? false)
+                isFolder: Self.folders.contains(window))
         }
         if now != tabs { tabs = now }
         let current = window.map { ObjectIdentifier($0.tabbedWindows == nil ? $0 : $0.tabGroup?.selectedWindow ?? $0) }
         if current != selected { selected = current }
+        let shown = window?.isVisible ?? false
+        if shown != isShown { isShown = shown }
     }
 
     private func window(_ id: ObjectIdentifier) -> NSWindow? { windows.first { ObjectIdentifier($0) == id } }
@@ -60,6 +64,8 @@ struct WindowLink: NSViewRepresentable {
     let openIn: OpenIn
     let layout: TabLayout
     let root: URL?
+    /// Last time's windows are still being reopened: a window without its file has no name yet.
+    let reopening: Bool
     let tabs: WindowTabs
 
     func makeNSView(context: Context) -> Probe { Probe() }
@@ -68,6 +74,7 @@ struct WindowLink: NSViewRepresentable {
         view.openIn = openIn
         view.layout = layout
         view.root = root
+        view.reopening = reopening
         view.tabs = tabs
         view.apply()
     }
@@ -75,32 +82,50 @@ struct WindowLink: NSViewRepresentable {
     final class Probe: NSView {
         var openIn = OpenIn.current
         var layout = TabLayout.top
-        var root: URL?
+        var root: URL? { didSet { if root != oldValue { isFolder = root.map(FS.isDir) ?? false } } }
+        private var isFolder = false
+        var reopening = false
         var tabs: WindowTabs?
-        private var observer: NSObjectProtocol?
+        private var observers: [NSObjectProtocol] = []
+        private var accessories: NSKeyValueObservation?
 
         override func viewDidMoveToWindow() {
-            observer.map(NotificationCenter.default.removeObserver)
-            observer = nil
+            observers.forEach(NotificationCenter.default.removeObserver)
+            observers = []
             guard let window else { return }
             // Tabs come and go without a notification of their own; a window update follows every such change.
-            observer = NotificationCenter.default.addObserver(
-                forName: NSWindow.didUpdateNotification, object: window, queue: .main
-            ) { [weak self] _ in MainActor.assumeIsolated { self?.apply() } }
+            // Selecting a tab shows its window, which is reported as an occlusion change.
+            observers = [NSWindow.didUpdateNotification, NSWindow.didChangeOcclusionStateNotification].map {
+                NotificationCenter.default.addObserver(forName: $0, object: window, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.apply() }
+                }
+            }
+            // The system's tab bar is added while windows are restored, long before the next update.
+            accessories = window.observe(\.titlebarAccessoryViewControllers) { [weak self] _, _ in
+                MainActor.assumeIsolated { self?.hideTabBar() }
+            }
             apply()
         }
 
         func apply() {
             guard let window else { return }
             if window.tabbingMode != openIn.tabbingMode { window.tabbingMode = openIn.tabbingMode }
-            WindowTabs.roots.setObject(root as NSURL?, forKey: window)
+            if isFolder { WindowTabs.folders.add(window) } else { WindowTabs.folders.remove(window) }
             // The title is the full path; a tab names only the file or folder.
-            let name = root?.lastPathComponent ?? "mlisb"
+            let name = root?.lastPathComponent ?? (reopening ? "" : "mlisb")
             if window.tab.title != name { window.tab.title = name }
             tabs?.window = window
             tabs?.refresh()
-            // The system's bar is a title bar accessory; hiding it is all that "down the left side" takes away.
-            for accessory in window.titlebarAccessoryViewControllers where Self.isTabBar(accessory.view) {
+            hideTabBar()
+        }
+
+        /// The system's bar is a title bar accessory; hiding it is all that "down the left side" takes away.
+        private func hideTabBar() {
+            guard let window else { return }
+            // While windows are restored the bar arrives as an empty accessory and is filled in later.
+            let tabbed = window.tabbedWindows != nil
+            for accessory in window.titlebarAccessoryViewControllers
+            where Self.isTabBar(accessory.view) || (tabbed && accessory.view.subviews.isEmpty) {
                 if accessory.isHidden != (layout == .left) { accessory.isHidden = layout == .left }
             }
         }
@@ -126,10 +151,14 @@ struct TabStrip: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: 2) {
-                    ForEach(tabs.tabs) { tab in row(tab) }
+                // A window in the background draws no rows: every title change would lay them out again.
+                // Nor does any window while the tabs are still being reopened and have no names.
+                if tabs.isShown && !Reopening.shared.isActive {
+                    VStack(spacing: 2) {
+                        ForEach(tabs.tabs) { tab in row(tab) }
+                    }
+                    .padding(6)
                 }
-                .padding(6)
             }
             Divider()
             Menu {

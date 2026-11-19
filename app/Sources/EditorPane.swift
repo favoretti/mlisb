@@ -52,10 +52,12 @@ struct EditorPane: View {
     }
 
     private static let latex = SwiftMathBridge()
+    /// One for every editor: each bridge starts a JavaScript context and loads highlight.js into it.
+    private static let highlighter = HighlightJSBridge()
 
     private func editor(width: CGFloat) -> NativeTextViewWrapper {
         var config = MarkdownEditorConfiguration.default
-        config.services.syntaxHighlighter = HighlightJSBridge()
+        config.services.syntaxHighlighter = Self.highlighter
         config.services.diagrams = Diagrams()
         config.services.images = LocalImages(folder: document.url.deletingLastPathComponent())
         config.services.bus = bus.engineBus

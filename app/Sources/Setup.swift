@@ -52,6 +52,64 @@ enum Session {
     static func apply() { UserDefaults.standard.set(reopensWindows, forKey: "NSQuitAlwaysKeepsWindows") }
 }
 
+/// Whether last time's windows are still being reopened. AppKit recreates them first and SwiftUI hands
+/// each its file a little later; until then a window says so instead of offering a new document.
+@MainActor @Observable final class Reopening {
+    static let shared = Reopening()
+
+    private(set) var isActive = false
+    @ObservationIgnored private var waiting = Set<ObjectIdentifier>()
+    @ObservationIgnored private var restored = false
+    /// Windows showing a file, so the saved state can say whether there is anything to reopen.
+    @ObservationIgnored private var withFiles = Set<ObjectIdentifier>() {
+        didSet { if withFiles.isEmpty != oldValue.isEmpty { NSApp.invalidateRestorableState() } }
+    }
+    private static let key = "mlisb.reopensFiles"
+
+    init() {
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didFinishRestoringWindowsNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated {
+                Reopening.shared.restored = true
+                Reopening.shared.settle()
+            }
+        }
+    }
+
+    func encode(_ coder: NSCoder) { coder.encode(!withFiles.isEmpty, forKey: Self.key) }
+
+    /// AppKit decodes the saved state, before any window is recreated, only when there is some.
+    func decoded(_ coder: NSCoder) {
+        guard Session.reopensWindows, !restored, coder.decodeBool(forKey: Self.key) else { return }
+        isActive = true
+        // A window saved without a file never gets one.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { Reopening.shared.isActive = false }
+    }
+
+    /// A window without its file yet. Only windows recreated by AppKit are waited for.
+    func waiting(_ window: AnyObject) {
+        withFiles.remove(ObjectIdentifier(window))
+        if isActive, !restored { waiting.insert(ObjectIdentifier(window)) }
+    }
+
+    func arrived(_ window: AnyObject) {
+        withFiles.insert(ObjectIdentifier(window))
+        waiting.remove(ObjectIdentifier(window))
+        settle()
+    }
+
+    func closed(_ window: AnyObject) {
+        withFiles.remove(ObjectIdentifier(window))
+        waiting.remove(ObjectIdentifier(window))
+        settle()
+    }
+
+    private func settle() {
+        if restored, waiting.isEmpty, isActive { isActive = false }
+    }
+}
+
 /// Where a file goes when it is opened while a window is already showing.
 enum OpenIn: String, CaseIterable, Identifiable {
     case tab, window

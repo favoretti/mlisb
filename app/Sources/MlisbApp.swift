@@ -16,6 +16,7 @@ struct MlisbApp: App {
 
     init() {
         Session.apply()
+        _ = Reopening.shared
         OpenIn.apply()
     }
 

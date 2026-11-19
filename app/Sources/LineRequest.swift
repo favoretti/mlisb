@@ -58,6 +58,14 @@ struct LineRequest: Equatable {
 
 /// Takes `mlisb://` events before SwiftUI does, so one never opens a window.
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func application(_ app: NSApplication, willEncodeRestorableState coder: NSCoder) {
+        MainActor.assumeIsolated { Reopening.shared.encode(coder) }
+    }
+
+    func application(_ app: NSApplication, didDecodeRestorableState coder: NSCoder) {
+        MainActor.assumeIsolated { Reopening.shared.decoded(coder) }
+    }
+
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSAppleEventManager.shared().setEventHandler(
             self, andSelector: #selector(handle(_:reply:)),
