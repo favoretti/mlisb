@@ -8,6 +8,14 @@ What changed in each released version of mlisb, newest first. The format follows
 
 Nothing yet.
 
+## [0.1.13] - 2026-11-20
+
+### Fixed
+
+- Tables in HTML, PDF, JPEG and ePub exports, and when copied as HTML or rich text, format what is inside their
+  cells: `code`, bold, italics and links show as such instead of as raw Markdown with backticks.
+  Centred and right-aligned columns keep their alignment.
+
 ## [0.1.12] - 2026-11-20
 
 ### Fixed
@@ -163,7 +171,8 @@ First release.
 - Settings for text size and line width.
 - Automatic updates, a Homebrew cask, and third-party license notices in the About window.
 
-[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.12...HEAD
+[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.13...HEAD
+[0.1.13]: https://github.com/favoretti/mlisb/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/favoretti/mlisb/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/favoretti/mlisb/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/favoretti/mlisb/compare/v0.1.9...v0.1.10

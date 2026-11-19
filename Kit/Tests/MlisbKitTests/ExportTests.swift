@@ -14,7 +14,7 @@ struct ExportTests {
 
     | A | B |
     |---|---|
-    | 1 | 2 |
+    | 1 | `go build -o ~/bin/x .` |
 
     ```swift
     let x = 1
@@ -41,7 +41,8 @@ struct ExportTests {
 
     @Test func htmlStructureAndDiagrams() async {
         let html = await Exporter.html(markdown: md, title: "T", baseURL: nil)
-        for needle in ["<h1>", "<table>", "<pre><code class=\"language-swift\">", "type=\"checkbox\" checked", "<title>T</title>"] {
+        for needle in ["<h1>", "<table>", "<pre><code class=\"language-swift\">", "type=\"checkbox\" checked", "<title>T</title>",
+                       "<td><code>go build -o ~/bin/x .</code></td>"] {
             #expect(html.contains(needle), "missing \(needle)")
         }
         #expect(html.components(separatedBy: "<svg").count - 1 >= 2)

@@ -101,7 +101,7 @@ public enum MarkdownHTMLRenderer {
             return "<pre>\(escape(ns.substring(with: range).trimmingCharacters(in: .newlines)))</pre>"
 
         case .table(let range):
-            return renderTable(range: range, ns: ns)
+            return renderTable(range: range, ns: ns, env: env)
 
         case .thematicBreak:
             return "<hr>"
@@ -270,14 +270,24 @@ public enum MarkdownHTMLRenderer {
         return "<pre><code>\(escaped)</code></pre>"
     }
 
-    private static func renderTable(range: NSRange, ns: NSString) -> String {
+    private static func renderTable(range: NSRange, ns: NSString, env: Env) -> String {
         let raw = ns.substring(with: range)
         guard let parsed = MarkdownStyler.parseTableSource(raw) else {
             return "<pre>\(escape(raw.trimmingCharacters(in: .newlines)))</pre>"
         }
-        let head = parsed.header.map { "<th>\(escape($0))</th>" }.joined()
+        // mlisb: cells hold inline Markdown (code, emphasis, links) and keep their column's alignment.
+        func cell(_ tag: String, _ text: String, _ column: Int) -> String {
+            let align: String? = switch column < parsed.alignments.count ? parsed.alignments[column] : .left {
+            case .left: nil
+            case .center: "center"
+            case .right: "right"
+            }
+            let open = align.map { "<\(tag) align=\"\($0)\">" } ?? "<\(tag)>"
+            return open + renderInlines(InlineParser.parse(text, registry: env.registry), ns: text as NSString, env: env) + "</\(tag)>"
+        }
+        let head = parsed.header.enumerated().map { cell("th", $1, $0) }.joined()
         let body = parsed.rows.map { row in
-            "<tr>" + row.map { "<td>\(escape($0))</td>" }.joined() + "</tr>"
+            "<tr>" + row.enumerated().map { cell("td", $1, $0) }.joined() + "</tr>"
         }.joined()
         return "<table><thead><tr>\(head)</tr></thead><tbody>\(body)</tbody></table>"
     }

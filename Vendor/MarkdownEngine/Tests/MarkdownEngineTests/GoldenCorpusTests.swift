@@ -259,7 +259,7 @@ $$</pre>
 | 3 | 4 |
 """#,
             baselineHTML: #"""
-<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td>==x==</td></tr><tr><td>3</td><td>4</td></tr></tbody></table>
+<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td><mark>x</mark></td></tr><tr><td>3</td><td>4</td></tr></tbody></table>
 """#
         ),
         GoldenEntry(
@@ -322,6 +322,7 @@ raw ==nicht== markiert
         "highlight", "highlight-wraps-emphasis", "emphasis-wraps-highlight",
         "highlight-in-heading", "highlight-in-list", "highlight-adjacent-code",
         "strikethrough", "mixed-document",
+        "table",  // mlisb: cells render inline Markdown, so its `==x==` becomes <mark>
     ]
 
     @Test("with both extensions the output matches the pre-seam baseline",

@@ -63,6 +63,13 @@ struct MlisbGFMTableTests {
                 == "<table><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>1</td><td>&lt;2&gt;</td></tr></tbody></table>")
     }
 
+    @Test("HTML export renders inline Markdown in cells and keeps column alignment")
+    func htmlInlines() {
+        #expect(MarkdownHTMLRenderer.html(from: "| CLI | Note |\n|---|:-:|\n| `px-cli` | **bold** and [link](https://a.example) `a\\|b` |\n")
+                == "<table><thead><tr><th>CLI</th><th align=\"center\">Note</th></tr></thead><tbody><tr><td><code>px-cli</code></td>"
+                + "<td align=\"center\"><strong>bold</strong> and <a href=\"https://a.example\">link</a> <code>a|b</code></td></tr></tbody></table>")
+    }
+
     @Test("incremental parse equals full parse over table lines")
     func fuzz() {
         let templates = ["a | b", "---|---", "| a | b |", "|---|---|", "1 | 2", "plain", "", "# H", "- x | y", "> q | r", "```", "--|--"]
