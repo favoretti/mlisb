@@ -878,6 +878,7 @@ enum MarkdownASTStyler {
         }
         attrs.append((parts.codeRange, [
             .font: ctx.codeFont, .backgroundColor: ctx.codeBackground, .paragraphStyle: codePara,
+            .wideBlock: true,  // mlisb
         ]))
         // Suppress spell-check underlines on the whole fenced block — code is not prose.
         attrs.append((parts.codeRange, [.spellingState: 0]))
@@ -1103,7 +1104,8 @@ enum MarkdownASTStyler {
                     if markers.count >= 4 {   // also hide the "(url)" run
                         let hide = NSRange(location: markers[2].location,
                                            length: NSMaxRange(markers[3]) - markers[2].location)
-                        attrs.append((hide, [.font: ctx.inlineMarkerFont, .foregroundColor: NSColor.clear]))
+                        attrs.append((hide, [.font: ctx.inlineMarkerFont, .foregroundColor: NSColor.clear,
+                                             .unbreakable: true]))  // mlisb
                     }
                 }
                 shrinkInlineMarkers(children, ctx: ctx, forceReveal: active, into: &attrs)

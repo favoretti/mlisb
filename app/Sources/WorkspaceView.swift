@@ -18,7 +18,7 @@ struct WorkspaceView: View {
             }
             content
         }
-        .navigationTitle(root?.lastPathComponent ?? "mlisb")
+        .navigationTitle((folder?.document?.url ?? root)?.displayPath ?? "mlisb")
         .background(WindowLink(openIn: openIn, layout: tabLayout, root: root, tabs: tabs))
         // Files opened from Finder or the CLI go to the window already showing them
         // (or their folder); an empty window takes anything.
@@ -187,5 +187,16 @@ private struct RowLabel: View {
         guard model.renaming == entry.url else { return }
         model.renaming = nil
         model.rename(entry.url, to: name)
+    }
+}
+
+extension URL {
+    /// The full path, with the home folder shown as `~`. The sandbox's own home is a container, so the
+    /// account's is read from the user database.
+    var displayPath: String {
+        let home = getpwuid(getuid()).map { String(cString: $0.pointee.pw_dir) } ?? ""
+        let path = standardizedFileURL.path
+        guard !home.isEmpty, path == home || path.hasPrefix(home + "/") else { return path }
+        return "~" + path.dropFirst(home.count)
     }
 }

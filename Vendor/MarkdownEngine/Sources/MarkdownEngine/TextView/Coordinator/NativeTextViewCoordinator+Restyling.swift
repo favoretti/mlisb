@@ -39,9 +39,13 @@ extension NativeTextViewCoordinator {
             wikiLinkMetadata = [:]
         } else {
             let displayState = WikiLinkService.makeDisplayState(from: text) { services.wikiLinks.name(forID: $0) }
-            displayText = displayState.display
+            // mlisb: Source mode shows the file's own line breaks.
+            displayText = configuration.revealAllSyntax
+                ? displayState.display
+                : SoftBreaks.display(displayState.display, registry: configuration.extensionRegistry)
             wikiLinkMetadata = displayState.metadata
         }
+        (textView as? NativeTextView)?.joinsLines = !rawMode && SoftBreaks.applies(to: text)  // mlisb
 
         // Claimed BEFORE the assignment: `textView.string =` re-enters
         // textViewDidChangeSelection synchronously, whose updateCodeBlockSelection

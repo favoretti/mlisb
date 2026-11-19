@@ -197,8 +197,9 @@ final class NativeTextViewContainer: NSView {
                 // Reading column: the column keeps its fixed width; re-center its X
                 // (and shift the wide-table overlay insets) instead of resizing.
                 textView.centerReadingColumn(forClipWidth: w)
-            } else if textView.frame.width != w {
-                textView.setFrameSize(NSSize(width: w, height: textView.frame.height))
+            } else if textView.updatePinnedTextWidth(clipWidth: w) || textView.frame.width != w + textView.extraRoom {
+                // mlisb: the view reaches past the right edge of the column by the room beside it.
+                textView.setFrameSize(NSSize(width: w + textView.extraRoom, height: textView.frame.height))
             }
         }
         // Below the header band and at the column's X, through the bounds origin.

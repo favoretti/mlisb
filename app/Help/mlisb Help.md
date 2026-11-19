@@ -6,6 +6,8 @@ mlisb shows Markdown the way GitHub would, and lets you edit it in place. This p
 
 - Click into a line to edit it. The syntax shows only where the cursor is.
 - **View → Source Mode** (⌘/) shows all the syntax at once.
+- A paragraph wraps to the window, as on GitHub, even if the file breaks it into shorter lines. The file keeps its line breaks, and Source Mode shows them. Two spaces or a backslash at the end of a line make a line break that always shows.
+- The title bar shows the full path of the open file.
 - Changes save by themselves, one second after you stop typing. Only what you typed changes in the file.
 - **File → New Document…** (⌘N) starts a new file. **File → Open…** (⌘O) opens a file or a whole folder.
 

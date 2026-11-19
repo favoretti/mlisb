@@ -20,7 +20,8 @@ extension NativeTextView {
             super.copy(sender)
             return
         }
-        let raw = (string as NSString).substring(with: sel)
+        let shown = (string as NSString).substring(with: sel)
+        let raw = joinsLines ? SoftBreaks.storage(shown) : shown  // mlisb
         MarkdownPasteboardWriter.write(markdown: raw, storageMarkdown: storageMarkdown(in: sel),
                                        to: .general, extensions: configuration.extensions,
                                        directives: configuration.directives,

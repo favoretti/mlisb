@@ -115,7 +115,10 @@ Tool…** and run the one line it shows; Settings → Setup shows whether the co
   a Quick Look preview for images and PDFs.
 - **GitHub Flavored Markdown.** Tables, task lists, alerts, footnotes, front matter, reference
   links, strikethrough, autolinks and a safe subset of HTML.
-- **Wide tables** spread into the free space beside the text before they wrap tightly or scroll.
+- **Paragraphs wrap to the window**, as on GitHub, even when the file was wrapped by hand. The file
+  keeps its own line breaks, and Source Mode shows them.
+- **Wide tables and code blocks** spread into the free space beside the text before they wrap or scroll.
+- **The full path** of the open file is in the title bar.
 - **Saves by itself**, one second after you stop typing, in place.
 - **Tabs your way.** A newly opened file becomes a tab or its own window, and the tabs sit across the
   top or in a list down the left side.

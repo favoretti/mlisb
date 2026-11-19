@@ -43,7 +43,7 @@ extension NativeTextViewCoordinator {
             textStorage: textView.textStorage
         )
         wikiLinkMetadata = storageState.metadata
-        let storage = storageState.storage
+        let storage = storedForm(storageState.storage)  // mlisb
 
         // Binding is already equal to `storage` after undo so SwiftUI won't re-render — rebuild the textView directly.
         if postUndo != nil {
@@ -82,7 +82,7 @@ extension NativeTextViewCoordinator {
         )
         wikiLinkMetadata = storageState.metadata
         lastComputedStorage = storageState.storage
-        let storage = storageState.storage
+        let storage = storedForm(storageState.storage)  // mlisb
         guard storage != lastSyncedText else { return }
         let target = documentId
         DispatchQueue.main.async { [self] in

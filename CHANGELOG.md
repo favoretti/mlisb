@@ -8,6 +8,23 @@ What changed in each released version of mlisb, newest first. The format follows
 
 Nothing yet.
 
+## [0.1.6] - 2026-11-19
+
+### Changed
+
+- The lines of a paragraph are joined and re-wrapped to the window, as GitHub shows them, so a file
+  wrapped by hand no longer reads as a ragged column. The same goes for a list item's continuation
+  lines and the lines of a quote. The file keeps its line breaks; Source Mode shows them, and a hard
+  break (two trailing spaces or a backslash) stays a line break.
+- Code blocks use the free space to the right of the text column, as wide tables already did.
+- The title bar shows the full path of the open file, with the home folder as `~`. Tabs still show
+  only the name.
+
+### Fixed
+
+- A line no longer wraps between a link and the punctuation after it, which left a lone `)` at the
+  start of the next line.
+
 ## [0.1.5] - 2026-11-18
 
 ### Added
@@ -85,7 +102,8 @@ First release.
 - Settings for text size and line width.
 - Automatic updates, a Homebrew cask, and third-party license notices in the About window.
 
-[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/favoretti/mlisb/releases/tag/v0.1.6
 [0.1.5]: https://github.com/favoretti/mlisb/releases/tag/v0.1.5
 [0.1.4]: https://github.com/favoretti/mlisb/releases/tag/v0.1.4
 [0.1.3]: https://github.com/favoretti/mlisb/releases/tag/v0.1.3

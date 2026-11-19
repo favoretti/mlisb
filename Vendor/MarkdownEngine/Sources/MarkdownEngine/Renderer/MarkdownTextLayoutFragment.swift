@@ -665,8 +665,9 @@ final class MarkdownTextLayoutFragment: NSTextLayoutFragment {
         }
         guard hasThematic else { return [] }
 
-        let containerWidth = textLayoutManager?.textContainer?.size.width ?? layoutFragmentFrame.width
         let textView = textLayoutManager?.textContainer?.textView
+        let containerWidth = (textView as? NativeTextView)?.pinnedTextWidth  // mlisb
+            ?? textLayoutManager?.textContainer?.size.width ?? layoutFragmentFrame.width
         let font = (textView as? NativeTextView)?.baseFont
             ?? textView?.font
             ?? NSFont.systemFont(ofSize: NSFont.systemFontSize)

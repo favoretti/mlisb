@@ -191,12 +191,13 @@ extension NativeTextViewCoordinator {
                        "wiki incremental splice diverged from full rebuild")
             }
 #endif
-            if storageState.storage != self.lastSyncedText {
+            let stored = storedForm(storageState.storage)  // mlisb
+            if stored != self.lastSyncedText {
                 let target = documentId
                 DispatchQueue.main.async {
                     guard self.bindingFollows(target) else { return }
-                    self.lastSyncedText = storageState.storage
-                    self.text = storageState.storage
+                    self.lastSyncedText = stored
+                    self.text = stored
                 }
             }
         }

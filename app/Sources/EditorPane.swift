@@ -103,10 +103,11 @@ struct EditorPane: View {
             for _ in 0..<40 {
                 // The window may not be key yet; the one showing this file's text is the target.
                 let textViews = NSApp.windows.compactMap { $0.contentView?.editorTextView() }
-                if let textView = textViews.first(where: { $0.string == document.text && !document.text.isEmpty })
+                // Lines are counted in the file: the editor shows a paragraph's lines joined, at the same offsets.
+                if let textView = textViews.first(where: { SoftBreaks.storage($0.string) == document.text && !document.text.isEmpty })
                     ?? NSApp.keyWindow?.contentView?.editorTextView(),
                    !textView.string.isEmpty || document.text.isEmpty {
-                    let at = request.selection(in: textView.string)
+                    let at = request.selection(in: SoftBreaks.storage(textView.string))
                     textView.window?.makeFirstResponder(textView)
                     textView.setSelectedRange(at)
                     // The text is laid out lazily; lay it all out so the target has a position to scroll to.

@@ -49,6 +49,7 @@ extension MarkdownStyler {
             let imageEmbedConfig = ctx.configuration.imageEmbed
             let maxWidth: CGFloat = {
                 if let tc = ctx.layoutBridge?.firstTextContainer {
+                    if let pinned = (tc.textView as? NativeTextView)?.pinnedTextWidth { return pinned }  // mlisb
                     let w = tc.containerSize.width - tc.lineFragmentPadding * 2
                     if w > 0 && w < imageEmbedConfig.unreasonableMaxWidth { return w }
                 }
@@ -152,6 +153,7 @@ extension MarkdownStyler {
                 // Determine max width from text container
                 let maxWidth: CGFloat = {
                     if let tc = ctx.layoutBridge?.firstTextContainer {
+                        if let pinned = (tc.textView as? NativeTextView)?.pinnedTextWidth { return pinned }  // mlisb
                         let w = tc.containerSize.width - tc.lineFragmentPadding * 2
                         if w > 0 && w < imageEmbedConfig.unreasonableMaxWidth { return w }
                     }

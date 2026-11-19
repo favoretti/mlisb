@@ -35,6 +35,40 @@ final class NativeTextView: NSTextView {
     var linkClickDidFire = false
     var linkClickDidNavigate = false
 
+    /// mlisb: the text shows paragraph lines joined (`SoftBreaks`); what leaves the view is converted back.
+    var joinsLines = false
+
+    /// mlisb: the width ordinary text keeps when the view reaches past the text column into the
+    /// room on its right (`wideTableOverflow`), which code blocks use; nil when there is none.
+    var pinnedTextWidth: CGFloat?
+
+    /// mlisb: how far the view reaches past the right edge of the text column.
+    var extraRoom: CGFloat { pinnedTextWidth == nil ? 0 : max(0, configuration.wideTableOverflow) }
+
+    /// mlisb: with room beside the column, the view reaches into it (code blocks use it) and ordinary
+    /// text is held to the column's width. In a wide window that width stays put while it resizes, so
+    /// the paragraphs are only laid out again when the column itself changes. Returns whether it did.
+    func updatePinnedTextWidth(clipWidth: CGFloat) -> Bool {
+        let column = clipWidth - 2 * textContainerInset.width
+        let pinned: CGFloat? = configuration.readingWidth == nil && configuration.wideTableOverflow > 0.5 && column > 0
+            ? column : nil
+        let changed = switch (pinned, pinnedTextWidth) {
+        case (nil, nil): false
+        case let (new?, old?): abs(new - old) > 0.5
+        default: true
+        }
+        guard changed else { return false }
+        pinnedTextWidth = pinned
+        // The paragraphs are handed to layout again (see +LayoutParagraphs); their styling stands.
+        DispatchQueue.main.async { [weak self] in
+            guard let storage = self?.textStorage, storage.length > 0 else { return }
+            storage.beginEditing()
+            storage.edited(.editedAttributes, range: NSRange(location: 0, length: storage.length), changeInLength: 0)
+            storage.endEditing()
+        }
+        return true
+    }
+
     // MARK: Configuration
     var configuration: MarkdownEditorConfiguration = .default {
         didSet {

@@ -30,7 +30,7 @@ enum TabLayout: String, CaseIterable, Identifiable {
 
     func refresh() {
         let now = windows.map { window in
-            Tab(id: ObjectIdentifier(window), title: window.title,
+            Tab(id: ObjectIdentifier(window), title: window.tab.title,
                 isFolder: Self.roots.object(forKey: window).map { FS.isDir($0 as URL) } ?? false)
         }
         if now != tabs { tabs = now }
@@ -94,6 +94,9 @@ struct WindowLink: NSViewRepresentable {
             guard let window else { return }
             if window.tabbingMode != openIn.tabbingMode { window.tabbingMode = openIn.tabbingMode }
             WindowTabs.roots.setObject(root as NSURL?, forKey: window)
+            // The title is the full path; a tab names only the file or folder.
+            let name = root?.lastPathComponent ?? "mlisb"
+            if window.tab.title != name { window.tab.title = name }
             tabs?.window = window
             tabs?.refresh()
             // The system's bar is a title bar accessory; hiding it is all that "down the left side" takes away.

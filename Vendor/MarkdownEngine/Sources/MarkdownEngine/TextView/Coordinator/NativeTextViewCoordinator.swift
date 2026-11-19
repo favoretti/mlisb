@@ -226,6 +226,30 @@ public final class NativeTextViewCoordinator: NSObject, NSTextViewDelegate {
     /// (unlike `lastSyncedText`, which updates via async dispatch and can lag a
     /// keystroke). This is the splice base for the incremental path.
     var lastComputedStorage: String = ""
+
+    /// mlisb: `storage` with joined paragraph lines split again, as the file has them.
+    func storedForm(_ storage: String) -> String {
+        (textView as? NativeTextView)?.joinsLines == true ? SoftBreaks.storage(storage) : storage
+    }
+
+    /// mlisb: entering Source mode puts the file's line breaks back; leaving it joins paragraph
+    /// lines again. Characters are swapped one for one in the storage, outside undo.
+    func refreshJoinedLines(in textView: NSTextView) {
+        guard let view = textView as? NativeTextView, view.joinsLines, let storage = view.textStorage else { return }
+        let stored = SoftBreaks.storage(view.string)
+        let wanted = configuration.revealAllSyntax
+            ? stored : SoftBreaks.display(stored, registry: configuration.extensionRegistry)
+        let have = Array(view.string.utf16)
+        let want = Array(wanted.utf16)
+        guard have.count == want.count, have != want else { return }
+        storage.beginEditing()
+        for i in have.indices where have[i] != want[i] {
+            storage.replaceCharacters(in: NSRange(location: i, length: 1), with: String(utf16CodeUnits: [want[i]], count: 1))
+        }
+        storage.endEditing()
+        parseGeneration &+= 1
+        cachedParsedDocument = nil
+    }
     /// DEBUG-only sampling counter for verifying splices against full rebuilds.
     var wikiVerifyCounter: UInt = 0
 

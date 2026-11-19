@@ -754,6 +754,7 @@ extension MarkdownStyler {
 
     /// Container width with fallback chain for "styler runs before layout" case.
     static func effectiveContainerWidth(for ctx: StylingContext) -> CGFloat {
+        if let pinned = (ctx.layoutBridge?.firstTextContainer?.textView as? NativeTextView)?.pinnedTextWidth { return pinned }  // mlisb
         if let container = ctx.layoutBridge?.firstTextContainer {
             // During SwiftUI-hosted window resizing, NSTextView bounds can be
             // updated before a width-tracking NSTextContainer publishes its

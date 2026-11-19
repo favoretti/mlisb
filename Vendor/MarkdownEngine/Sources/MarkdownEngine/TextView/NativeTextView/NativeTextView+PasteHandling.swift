@@ -171,8 +171,9 @@ extension NativeTextView {
         guard let ts = textStorage, range.length > 0, NSMaxRange(range) <= ts.length else { return "" }
         let piece = ts.attributedSubstring(from: range)
         guard !configuration.rawSourceMode else { return piece.string }
-        return WikiLinkService.makeStorageState(from: piece.string, existingMetadata: [:],
-                                                textStorage: NSTextStorage(attributedString: piece)).storage
+        let stored = WikiLinkService.makeStorageState(from: piece.string, existingMetadata: [:],
+                                                      textStorage: NSTextStorage(attributedString: piece)).storage
+        return joinsLines ? SoftBreaks.storage(stored) : stored  // mlisb
     }
 
     /// Reads the textual content of a pasted markdown/text file URL — the

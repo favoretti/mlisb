@@ -326,6 +326,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         let initialState = WikiLinkService.makeDisplayState(from: text) { configuration.services.wikiLinks.name(forID: $0) }
         textView.string = initialState.display
         textView.delegate = context.coordinator
+        textView.textContentStorage?.delegate = context.coordinator  // mlisb: see +LayoutParagraphs
         textView.isVerticallyResizable = true
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.postsFrameChangedNotifications = true
@@ -580,6 +581,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         if context.coordinator.configuration.revealAllSyntax != configuration.revealAllSyntax {
             context.coordinator.configuration.revealAllSyntax = configuration.revealAllSyntax
             textView.configuration.revealAllSyntax = configuration.revealAllSyntax
+            context.coordinator.refreshJoinedLines(in: textView)
             let fullRange = NSRange(location: 0, length: (textView.string as NSString).length)
             if fullRange.length > 0 {
                 context.coordinator.restyleParagraphs([fullRange], in: textView)
@@ -621,6 +623,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             textView.configuration.wideTableOverflow = configuration.wideTableOverflow
             context.coordinator.configuration.wideTableOverflow = configuration.wideTableOverflow
             textView.wideTableOverflowDidChange()
+            (textView.superview as? NativeTextViewContainer)?.restack(propagateWidth: true)
         }
         // Refresh services/theme when the embedder hands us a new configuration
         // (e.g. when the available wiki-link targets change). Cheap pointer-/
