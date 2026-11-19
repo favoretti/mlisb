@@ -97,4 +97,5 @@ pbpaste | mlisb -        # read piped text
 - **File → Export** saves HTML, PDF, JPEG or ePub. **Edit → Copy as** copies plain text, rich text, Markdown or HTML.
 - Press Space on a Markdown file in Finder for a rendered preview. It fills the Quick Look window, so widen the window to see more.
 - Links to other Markdown files open in mlisb. Anything that would leave the app asks first.
+- **Help → Third-Party Notices** lists the software mlisb includes, with each license.
 - The project, its source and its issue tracker: [mlisb on GitHub](https://github.com/favoretti/mlisb).

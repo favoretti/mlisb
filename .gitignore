@@ -8,6 +8,7 @@ xcuserdata/
 app/Info.plist
 app/mlisb.entitlements
 app/Credits.html
+app/Third-Party Notices.md
 Kit/Sources/MlisbKit/Resources/render/
 notes/
 .claude/worktrees/

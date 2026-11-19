@@ -2,8 +2,8 @@
 
 mlisb is released under the MIT license (see `LICENSE`). It includes the software below, each under
 its own license. The JavaScript packages bundled into the diagram page (Mermaid and what it depends
-on) are listed, with their licenses, in the app's About window; that list is generated from the
-packages actually bundled when the app is built.
+on) are listed, with their licenses, under Help → Third-Party Notices in the app; that list is
+generated from the packages actually bundled when the app is built.
 
 ## MarkdownEngine
 
@@ -11,7 +11,7 @@ The editor engine in `Vendor/MarkdownEngine` is a modified copy of swift-markdow
 (https://github.com/nodes-app/swift-markdown-engine). The changes are listed in
 `Vendor/MarkdownEngine/PATCHES.md`. Licensed under the Apache License, Version 2.0:
 
-```
+```text
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -219,7 +219,7 @@ The editor engine in `Vendor/MarkdownEngine` is a modified copy of swift-markdow
 
 https://github.com/mgriebling/SwiftMath
 
-```
+```text
 MIT License
 
 Copyright (c) 2023 Computer Inspirations
@@ -247,7 +247,7 @@ SOFTWARE.
 
 https://github.com/sparkle-project/Sparkle
 
-```
+```text
 Copyright (c) 2006-2013 Andy Matuschak.
 Copyright (c) 2009-2013 Elgato Systems GmbH.
 Copyright (c) 2011-2014 Kornel Lesiński.
@@ -388,7 +388,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 https://github.com/highlightjs/highlight.js
 
-```
+```text
 BSD 3-Clause Licence
 
 Copyright (c) 2006-2025 Josh Goebel <hello@joshgoebel.com> and other contributors.

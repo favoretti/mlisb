@@ -93,6 +93,9 @@ private struct HelpCommand: View {
         Button("mlisb Help") {
             if let url = Bundle.main.url(forResource: "mlisb Help", withExtension: "md") { openWindow(value: url) }
         }
+        Button("Third-Party Notices") {
+            if let url = Bundle.main.url(forResource: "Third-Party Notices", withExtension: "md") { openWindow(value: url) }
+        }
         Button("mlisb on GitHub") { NSWorkspace.shared.open(URL(string: "https://github.com/favoretti/mlisb")!) }
     }
 }

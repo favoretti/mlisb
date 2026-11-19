@@ -29,6 +29,8 @@ targets:
       - Credits.html
       - path: Help/mlisb Help.md
         buildPhase: resources
+      - path: Third-Party Notices.md
+        buildPhase: resources
       - path: ../bin/mlisb
         buildPhase:
           copyFiles:

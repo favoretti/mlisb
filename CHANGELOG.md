@@ -8,6 +8,14 @@ What changed in each released version of mlisb, newest first. The format follows
 
 Nothing yet.
 
+## [0.1.9] - 2026-11-19
+
+### Changed
+
+- The third-party notices open in their own window from **Help → Third-Party Notices**, which you can
+  resize and search, with each license in a wrapping block. The About window only points there; its
+  credits view could not be resized and cut off long lines.
+
 ## [0.1.8] - 2026-11-19
 
 ### Changed
@@ -123,7 +131,8 @@ First release.
 - Settings for text size and line width.
 - Automatic updates, a Homebrew cask, and third-party license notices in the About window.
 
-[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/favoretti/mlisb/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/favoretti/mlisb/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/favoretti/mlisb/releases/tag/v0.1.7
 [0.1.6]: https://github.com/favoretti/mlisb/releases/tag/v0.1.6

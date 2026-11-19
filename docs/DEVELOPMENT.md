@@ -10,7 +10,7 @@ How to build, test and release the app. For what the app does, see the [README](
 
 ## Build and run
 
-1. `cd render && pnpm install && pnpm build` builds the mermaid and d2 page into `Kit/Sources/MlisbKit/Resources/render/`. That output is gitignored, so this step is required on a fresh clone. It also writes `app/Credits.html`, the license list shown in the About window, which `xcodegen` expects to find.
+1. `cd render && pnpm install && pnpm build` builds the mermaid and d2 page into `Kit/Sources/MlisbKit/Resources/render/`. That output is gitignored, so this step is required on a fresh clone. It also writes `app/Third-Party Notices.md` (opened from Help → Third-Party Notices) and `app/Credits.html` (the About panel's line pointing there), which `xcodegen` expects to find.
 2. `cd app && xcodegen generate`
 3. `cd app && xcodebuild -project mlisb.xcodeproj -scheme mlisb -derivedDataPath .build/xcode build`. Or open `app/mlisb.xcodeproj` in Xcode and run. The app lands in `app/.build/xcode/Build/Products/Debug/mlisb.app`.
 

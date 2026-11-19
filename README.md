@@ -191,8 +191,8 @@ changed in each version is in [CHANGELOG.md](CHANGELOG.md). The plan and current
 ## Licenses
 
 mlisb is released under the MIT license, see [LICENSE](LICENSE). The parts it builds on keep their own.
-The full texts are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), and the app shows them in its
-About window.
+The full texts are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), and the app shows them, with
+the license of every JavaScript package in the diagram page, under Help → Third-Party Notices.
 
 - MarkdownEngine (vendored, modified): Apache-2.0, see `Vendor/MarkdownEngine/LICENSE`.
 - mermaid, SwiftMath, Sparkle: MIT.
