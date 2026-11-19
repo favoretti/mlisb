@@ -8,6 +8,13 @@ What changed in each released version of mlisb, newest first. The format follows
 
 Nothing yet.
 
+## [0.1.7] - 2026-11-19
+
+### Changed
+
+- The Quick Look preview fills the width of its window: widening the window widens the text,
+  tables and code blocks instead of keeping a fixed column.
+
 ## [0.1.6] - 2026-11-19
 
 ### Changed
@@ -102,7 +109,8 @@ First release.
 - Settings for text size and line width.
 - Automatic updates, a Homebrew cask, and third-party license notices in the About window.
 
-[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/favoretti/mlisb/releases/tag/v0.1.7
 [0.1.6]: https://github.com/favoretti/mlisb/releases/tag/v0.1.6
 [0.1.5]: https://github.com/favoretti/mlisb/releases/tag/v0.1.5
 [0.1.4]: https://github.com/favoretti/mlisb/releases/tag/v0.1.4

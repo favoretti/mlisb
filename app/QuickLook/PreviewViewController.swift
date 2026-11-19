@@ -32,24 +32,24 @@ struct PreviewView: View {
                         .font(.callout).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity).padding(6).background(.bar)
                 }
-                GeometryReader { geometry in Self.editor(text, width: geometry.size.width) }
+                Self.editor(text)
             }
         }
     }
 
-    static func editor(_ text: String, width: CGFloat) -> NativeTextViewWrapper {
+    static func editor(_ text: String) -> NativeTextViewWrapper {
         var editor = NativeTextViewWrapper(
-            text: .constant(text), configuration: configuration(width: width), documentId: "preview", isEditable: false)
+            text: .constant(text), configuration: configuration, documentId: "preview", isEditable: false)
         // A preview can't ask before opening, so it follows no links.
         editor.onOpenLink = { _ in true }
         return editor
     }
 
-    static func configuration(width: CGFloat) -> MarkdownEditorConfiguration {
+    static var configuration: MarkdownEditorConfiguration {
         var config = MarkdownEditorConfiguration.default
         config.services.syntaxHighlighter = HighlightJSBridge()
-        // Same centred column of at most 760pt as the app.
-        config.textInsets = TextInsets(horizontal: max(28, (width - 760) / 2), vertical: 12)
+        // The preview fills the Quick Look window, so widening it widens the text, tables and code.
+        config.textInsets = TextInsets(horizontal: 28, vertical: 12)
         return config
     }
 }

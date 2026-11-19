@@ -125,7 +125,7 @@ Tool…** and run the one line it shows; Settings → Setup shows whether the co
 - **Comes back as you left it.** The windows you had open reopen at launch, including after an
   update.
 - **Export** to HTML, PDF, JPEG and ePub. **Copy as** plain text, rich text, Markdown or HTML.
-- **Quick Look.** Press Space on a Markdown file in Finder for a rendered preview.
+- **Quick Look.** Press Space on a Markdown file in Finder for a rendered preview that fills the window.
 - **Careful with links.** A link to another Markdown file opens in the app. Anything that would
   leave the app asks first.
 - **Help → mlisb Help** opens a built-in guide, itself a Markdown document with live diagrams.
