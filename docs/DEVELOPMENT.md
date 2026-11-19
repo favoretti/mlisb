@@ -20,7 +20,7 @@ Re-run `xcodegen generate` after adding or removing source files. Local builds a
 
 - App: `cd app && xcodebuild -project mlisb.xcodeproj -scheme mlisb -derivedDataPath .build/xcode test`. Runs inside the sandboxed app. Launcher: `sh bin/test-mlisb.sh`.
 - Kit: `cd Kit && swift test`. Covers diagram rendering, export.
-- Engine: `cd Vendor/MarkdownEngine && swift test`. One upstream test, `MarkdownHTMLRendererTests` ("bare URLs and emails autolink"), fails on macOS 27. It is unrelated to our changes.
+- Engine: `cd Vendor/MarkdownEngine && swift test`. Every test must pass.
 
 ## Command-line tool
 

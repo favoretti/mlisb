@@ -6,7 +6,10 @@ What changed in each released version of mlisb, newest first. The format follows
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- HTML export and **Copy as HTML** link an address written as `www.…` to `http://`, as GitHub does;
+  on macOS 27 it became `https://`.
 
 ## [0.1.10] - 2026-11-19
 

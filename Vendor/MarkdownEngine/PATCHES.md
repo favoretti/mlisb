@@ -5,6 +5,7 @@ To see the full diff: `diff -ru <upstream checkout>/Sources Sources`.
 
 | Change | Files |
 |---|---|
+| HTML export and Copy as HTML link a `www.` address written without a scheme to `http://`, as GitHub does, instead of whatever scheme the system link detector picks (https on macOS 27) | `Renderer/MarkdownHTMLRenderer.swift` |
 | Overlay scroller always (no legacy scroller with a track): `scrollerStyle` is set to `.overlay` and set again when the system's preferred style changes. Overriding the getter instead stops AppKit from ever showing the knob | `TextView/ClampedScrollView.swift` |
 | `DiagramRenderer` service: fenced blocks drawn as images, source shown when the caret is inside | `Services/MarkdownEditorServices.swift`, `Styling/MarkdownStyler+Diagrams.swift` (new), `Styling/MarkdownStyler.swift`, `TextView/NativeTextViewWrapper.swift` |
 | `NativeTextViewWrapper.onOpenLink: ((String) -> Bool)?`: markdown links and bare URLs offered to the embedder with the raw target; `true` = handled | `TextView/NativeTextViewWrapper.swift`, `TextView/Coordinator/NativeTextViewCoordinator.swift`, `TextView/Coordinator/NativeTextViewCoordinator+TextDelegate.swift` |

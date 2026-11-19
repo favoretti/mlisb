@@ -403,8 +403,13 @@ public enum MarkdownHTMLRenderer {
         var cursor = 0
         for match in matches {
             guard let url = match.url else { continue }
+            let text = ns.substring(with: match.range)
+            // mlisb: GitHub links `www.…` written without a scheme to `http://`; the system detector's
+            // choice changes between macOS versions (https on macOS 27).
+            let href = (url.scheme == "http" || url.scheme == "https") && !text.contains("://")
+                ? "http://" + text : url.absoluteString
             out += escape(ns.substring(with: NSRange(location: cursor, length: match.range.location - cursor)))
-            out += "<a href=\"\(target(url.absoluteString))\">\(escape(ns.substring(with: match.range)))</a>"
+            out += "<a href=\"\(target(href))\">\(escape(text))</a>"
             cursor = NSMaxRange(match.range)
         }
         out += escape(ns.substring(from: cursor))
