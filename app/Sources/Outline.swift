@@ -76,3 +76,18 @@ extension NSView {
         return nil
     }
 }
+
+extension NSTextView {
+    /// Selects `range` and scrolls it into view. The text is laid out lazily, so lay it all out first:
+    /// until then a heading far down has no position to scroll to.
+    func reveal(_ range: NSRange) {
+        window?.makeFirstResponder(self)
+        setSelectedRange(range)
+        guard let tlm = textLayoutManager else { return scrollRangeToVisible(range) }
+        tlm.ensureLayout(for: tlm.documentRange)
+        if let location = tlm.location(tlm.documentRange.location, offsetBy: range.location),
+           let fragment = tlm.textLayoutFragment(for: location) {
+            scrollToVisible(fragment.layoutFragmentFrame.insetBy(dx: 0, dy: -80))
+        }
+    }
+}

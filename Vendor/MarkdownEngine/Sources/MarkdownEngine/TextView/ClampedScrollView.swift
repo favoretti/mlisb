@@ -16,11 +16,13 @@ final class ClampedScrollView: NSScrollView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         disableRubberBand()
+        keepOverlayScroller()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         disableRubberBand()
+        keepOverlayScroller()
     }
 
     /// No rubber band. AppKit applies a scroll on the next display refresh, not
@@ -35,11 +37,19 @@ final class ClampedScrollView: NSScrollView {
         verticalScrollElasticity = .none
     }
 
-    // mlisb: always the thin overlay scroller, never the legacy one with a track
-    // (AppKit switches to legacy when a mouse is connected).
-    override var scrollerStyle: NSScroller.Style {
-        get { .overlay }
-        set { super.scrollerStyle = .overlay }
+    // mlisb: always the thin overlay scroller, never the legacy one with a track (AppKit switches
+    // to legacy when a mouse is connected). Set, not overridden: with the getter overridden
+    // AppKit never shows the overlay knob.
+    private func keepOverlayScroller() {
+        scrollerStyle = .overlay
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(preferredScrollerStyleChanged),
+            name: NSScroller.preferredScrollerStyleDidChangeNotification, object: nil)
+    }
+
+    // AppKit applies the new style to every scroll view after posting the notification.
+    @objc private func preferredScrollerStyleChanged() {
+        DispatchQueue.main.async { [weak self] in self?.scrollerStyle = .overlay }
     }
 
     /// AppKit can process a physical window resize inside a nested tracking

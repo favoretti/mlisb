@@ -61,10 +61,13 @@ final class NativeTextView: NSTextView {
         pinnedTextWidth = pinned
         // The paragraphs are handed to layout again (see +LayoutParagraphs); their styling stands.
         DispatchQueue.main.async { [weak self] in
-            guard let storage = self?.textStorage, storage.length > 0 else { return }
+            guard let self, let storage = textStorage, storage.length > 0 else { return }
             storage.beginEditing()
             storage.edited(.editedAttributes, range: NSRange(location: 0, length: storage.length), changeInLength: 0)
             storage.endEditing()
+            // Measure the new height now: left to lazy layout it changes on every scroll step, and
+            // each change hides the overlay scroller.
+            if let scrollView = enclosingScrollView { recalcOverscroll(for: scrollView, debugTag: "?") }
         }
         return true
     }

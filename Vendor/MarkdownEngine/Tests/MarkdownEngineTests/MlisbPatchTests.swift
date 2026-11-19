@@ -114,6 +114,7 @@ struct MlisbStylerTests {
         let c = NativeTextViewCoordinator(
             text: .constant(""), fontName: "SF Pro", fontSize: 16,
             isWikiLinkActive: .constant(false), onLinkClick: nil, onInlineSelectionChange: nil)
+        c.textView = tv
         c.rebuildTextStorageAndStyle(tv, from: "- first\n  second\n")
         // Shown joined to the item (SoftBreaks), stored as written.
         #expect(tv.string == "- first\u{2005}\u{FE00}\u{FE00}second\n")

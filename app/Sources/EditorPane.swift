@@ -91,9 +91,7 @@ struct EditorPane: View {
         // take the same heading's position from what is displayed.
         let displayed = Outline.headings(in: textView.string)
         guard displayed.indices.contains(index) else { return }
-        textView.window?.makeFirstResponder(textView)
-        textView.setSelectedRange(NSRange(location: displayed[index].range.location, length: 0))
-        textView.scrollRangeToVisible(displayed[index].range)
+        textView.reveal(NSRange(location: displayed[index].range.location, length: 0))
     }
 
     /// The editor's text view appears a moment after the pane, so wait for it.
@@ -107,15 +105,7 @@ struct EditorPane: View {
                 if let textView = textViews.first(where: { SoftBreaks.storage($0.string) == document.text && !document.text.isEmpty })
                     ?? NSApp.keyWindow?.contentView?.editorTextView(),
                    !textView.string.isEmpty || document.text.isEmpty {
-                    let at = request.selection(in: SoftBreaks.storage(textView.string))
-                    textView.window?.makeFirstResponder(textView)
-                    textView.setSelectedRange(at)
-                    // The text is laid out lazily; lay it all out so the target has a position to scroll to.
-                    if let tlm = textView.textLayoutManager {
-                        tlm.ensureLayout(for: tlm.documentRange)
-                        if let loc = tlm.location(tlm.documentRange.location, offsetBy: at.location),
-                           let fragment = tlm.textLayoutFragment(for: loc) { textView.scrollToVisible(fragment.layoutFragmentFrame.insetBy(dx: 0, dy: -80)) }
-                    }
+                    textView.reveal(request.selection(in: SoftBreaks.storage(textView.string)))
                     return
                 }
                 try? await Task.sleep(for: .milliseconds(50))

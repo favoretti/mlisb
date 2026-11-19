@@ -121,7 +121,7 @@ Tool…** and run the one line it shows; Settings → Setup shows whether the co
 - **The full path** of the open file is in the title bar.
 - **Saves by itself**, one second after you stop typing, in place.
 - **Tabs your way.** A newly opened file becomes a tab or its own window, and the tabs sit across the
-  top or in a list down the left side.
+  top or in a list down the left side, whose width you drag.
 - **Comes back as you left it.** The windows you had open reopen at launch, including after an
   update.
 - **Export** to HTML, PDF, JPEG and ePub. **Copy as** plain text, rich text, Markdown or HTML.

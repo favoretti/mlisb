@@ -116,6 +116,12 @@ struct TabStrip: View {
     let tabs: WindowTabs
     @Environment(\.openWindow) private var openWindow
     @State private var hovered: ObjectIdentifier?
+    /// Every window has its own strip; one shared width keeps switching tabs from jumping.
+    @AppStorage("tabStripWidth") private var width = TabStrip.defaultWidth
+    @State private var dragStart: Double?
+
+    static let defaultWidth = 190.0
+    static let widths = 140.0...480.0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -135,8 +141,25 @@ struct TabStrip: View {
             .menuStyle(.borderlessButton)
             .padding(8)
         }
-        .frame(width: 190)
+        .frame(width: Self.widths.clamp(width))
         .background(.bar)
+        .overlay(alignment: .trailing) { resizeHandle }
+    }
+
+    private var resizeHandle: some View {
+        Color.clear
+            .frame(width: 6)
+            .contentShape(Rectangle())
+            .onHover { inside in if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() } }
+            .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                .onChanged { drag in
+                    let start = dragStart ?? Self.widths.clamp(width)
+                    dragStart = start
+                    width = Self.widths.clamp(start + drag.translation.width)
+                }
+                .onEnded { _ in dragStart = nil })
+            .onTapGesture(count: 2) { width = Self.defaultWidth }
+            .help("Drag to resize; double-click for the default width")
     }
 
     private func row(_ tab: WindowTabs.Tab) -> some View {
@@ -164,4 +187,8 @@ struct TabStrip: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
+}
+
+extension ClosedRange where Bound == Double {
+    func clamp(_ value: Double) -> Double { Swift.min(Swift.max(value, lowerBound), upperBound) }
 }

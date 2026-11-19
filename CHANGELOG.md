@@ -8,6 +8,20 @@ What changed in each released version of mlisb, newest first. The format follows
 
 Nothing yet.
 
+## [0.1.8] - 2026-11-19
+
+### Changed
+
+- The list of tabs down the left side can be resized: drag its right edge. Double-click the edge for
+  the default width. The width is the same in every window.
+
+### Fixed
+
+- The scroll bar shows while you scroll.
+- Clicking a heading in Table of Contents scrolls to it, also far down a long document.
+- Stepping through changes (⌥⌘↓ / ⌥⌘↑) scrolls to a change that is far down.
+- The document's height no longer shifts while scrolling after the window changes width.
+
 ## [0.1.7] - 2026-11-19
 
 ### Changed
@@ -109,7 +123,8 @@ First release.
 - Settings for text size and line width.
 - Automatic updates, a Homebrew cask, and third-party license notices in the About window.
 
-[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/favoretti/mlisb/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/favoretti/mlisb/releases/tag/v0.1.7
 [0.1.6]: https://github.com/favoretti/mlisb/releases/tag/v0.1.6
 [0.1.5]: https://github.com/favoretti/mlisb/releases/tag/v0.1.5

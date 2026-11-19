@@ -26,9 +26,7 @@ extension Document {
         let location = textView.selectedRange().location
         guard let change = forward ? review.next(after: location) : review.previous(before: location) else { return }
         let range = change.range.clamped(to: (textView.string as NSString).length)
-        textView.window?.makeFirstResponder(textView)
-        textView.setSelectedRange(range)
-        textView.scrollRangeToVisible(range)
+        textView.reveal(range)
         current = change
     }
 }
