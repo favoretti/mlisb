@@ -7,21 +7,33 @@ enum Compare {
         enum Kind { case same, added, removed, gap }
         let kind: Kind
         let text: String
+        /// UTF-16 ranges in `text` of the words that changed, when only part of the line did.
+        var words: [NSRange] = []
     }
 
     static func rows(from old: String, to new: String, context: Int = 2) -> [Row] {
-        func lines(_ s: String, _ kind: Row.Kind) -> [Row] {
+        func lines(_ s: String, _ kind: Row.Kind, words: [NSRange] = []) -> [Row] {
             var parts = s.components(separatedBy: "\n")
             if parts.last == "" { parts.removeLast() }
-            return parts.map { Row(kind: kind, text: $0) }
+            var start = 0
+            return parts.map { part in
+                let length = (part as NSString).length
+                let line = NSRange(location: start, length: length)
+                start += length + 1
+                let inLine = words.compactMap { $0.intersection(line) }.filter { $0.length > 0 }
+                return Row(kind: kind, text: part, words: inLine.map { NSRange(location: $0.location - line.location, length: $0.length) })
+            }
         }
         let ns = new as NSString
         var all: [Row] = []
         var pos = 0
         for c in TextDiff.changes(from: old, to: new) {
+            let added = ns.substring(with: c.range)
             all += lines(ns.substring(with: NSRange(location: pos, length: c.range.location - pos)), .same)
-            all += lines(c.oldText, .removed)
-            all += lines(ns.substring(with: c.range), .added)
+            // The diff marks words in the new text only; diffing back marks them in the old.
+            let removedWords = c.kind == .modified ? TextDiff.changes(from: added, to: c.oldText).flatMap(\.wordRanges) : []
+            all += lines(c.oldText, .removed, words: removedWords)
+            all += lines(added, .added, words: c.wordRanges.map { NSRange(location: $0.location - c.range.location, length: $0.length) })
             pos = NSMaxRange(c.range)
         }
         all += lines(ns.substring(from: pos), .same)
@@ -83,7 +95,8 @@ struct HistoryView: View {
             }
             .padding(10)
         }
-        .frame(width: 820, height: 520)
+        .frame(minWidth: 700, maxWidth: .infinity, minHeight: 420, maxHeight: .infinity)
+        .background(ResizableSheet(key: "historySize", minimum: NSSize(width: 700, height: 420), initial: NSSize(width: 1000, height: 680)))
         .onAppear {
             versions = document.history.versions(for: document.url)
             selection = versions.first?.id
@@ -97,21 +110,34 @@ struct HistoryView: View {
             Text(selected == nil ? "" : "Identical to the current text.").foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            ScrollView([.vertical, .horizontal]) {
+            ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                        Text(row.text.isEmpty ? " " : row.text)
+                        Text(text(of: row))
                             .font(.system(.body, design: .monospaced))
                             .foregroundStyle(row.kind == .gap ? .secondary : .primary)
-                            .fixedSize(horizontal: true, vertical: false)
+                            .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(row.kind == .added ? Color.green.opacity(0.2)
-                                        : row.kind == .removed ? Color.red.opacity(0.2) : .clear)
+                            .padding(.horizontal, 4)
+                            .background(tint(row.kind).opacity(0.2))
                     }
                 }
+                .textSelection(.enabled)
                 .padding(8)
             }
         }
+    }
+
+    private func tint(_ kind: Compare.Row.Kind) -> Color {
+        kind == .added ? .green : kind == .removed ? .red : .clear
+    }
+
+    private func text(of row: Compare.Row) -> AttributedString {
+        var line = AttributedString(row.text.isEmpty ? " " : row.text)
+        for word in row.words {
+            if let range = Range(word, in: line) { line[range].backgroundColor = tint(row.kind).opacity(0.45) }
+        }
+        return line
     }
 
     private func label(_ origin: HistoryStore.Origin) -> String {
@@ -134,6 +160,45 @@ struct HistoryView: View {
             dismiss()
         } catch {
             self.error = error.localizedDescription
+        }
+    }
+}
+
+/// SwiftUI sheets have a fixed size; this gives the sheet's window a resize edge and remembers the size.
+struct ResizableSheet: NSViewRepresentable {
+    let key: String
+    let minimum: NSSize
+    let initial: NSSize
+
+    func makeNSView(context: Context) -> Probe { Probe(self) }
+    func updateNSView(_ view: Probe, context: Context) {}
+
+    final class Probe: NSView {
+        private let sheet: ResizableSheet
+        private var configured = false
+
+        init(_ sheet: ResizableSheet) {
+            self.sheet = sheet
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) { fatalError() }
+
+        override func viewDidMoveToWindow() {
+            guard let window, !configured else { return }
+            configured = true
+            window.styleMask.insert(.resizable)
+            window.contentMinSize = sheet.minimum
+            let saved = UserDefaults.standard.string(forKey: sheet.key).map(NSSizeFromString) ?? sheet.initial
+            let size = NSSize(width: max(saved.width, sheet.minimum.width), height: max(saved.height, sheet.minimum.height))
+            // SwiftUI sizes the sheet to its minimum first; set the size after that.
+            DispatchQueue.main.async { window.setContentSize(size) }
+            NotificationCenter.default.addObserver(self, selector: #selector(resized), name: NSWindow.didEndLiveResizeNotification, object: window)
+        }
+
+        @objc private func resized(_ note: Notification) {
+            guard let window = note.object as? NSWindow else { return }
+            UserDefaults.standard.set(NSStringFromSize(window.contentLayoutRect.size), forKey: sheet.key)
         }
     }
 }

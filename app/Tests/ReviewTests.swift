@@ -108,4 +108,14 @@ import XCTest
         XCTAssertEqual(rows, ["gap … 2 unchanged lines …", "same 3", "same 4", "removed 5", "added five", "same 6", "same 7",
                               "gap … 3 unchanged lines …"])
     }
+
+    func testCompareRowsMarkTheChangedWordsOfALine() {
+        let old = "intro\nmodified: 2026-11-19T16:52:29Z\nend\n"
+        let new = "intro\nmodified: 2026-11-19T20:10:31Z\nend\n"
+        let rows = Compare.rows(from: old, to: new)
+        func marked(_ row: Compare.Row) -> [String] { row.words.map { (row.text as NSString).substring(with: $0) } }
+        let removed = rows.first { $0.kind == .removed }!, added = rows.first { $0.kind == .added }!
+        XCTAssertEqual(marked(removed), ["19T16", "52", "29Z"])
+        XCTAssertEqual(marked(added), ["19T20", "10", "31Z"])
+    }
 }

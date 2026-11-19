@@ -10,6 +10,12 @@ import XCTest
         XCTAssertTrue(document.isReadOnly)
     }
 
+    func testAboutCreditsReadAsTheAboutPanelReadsThem() throws {
+        let url = try XCTUnwrap(Bundle.main.url(forResource: "Credits", withExtension: "html"))
+        let credits = try NSAttributedString(url: url, options: [:], documentAttributes: nil)
+        XCTAssertTrue(credits.string.contains("Help → Third-Party Notices"), credits.string)
+    }
+
     func testThirdPartyNoticesOpenReadOnlyWithEveryBundledLicense() throws {
         let url = try XCTUnwrap(Bundle.main.url(forResource: "Third-Party Notices", withExtension: "md"))
         let document = Document(url: url)

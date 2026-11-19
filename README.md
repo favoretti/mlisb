@@ -78,7 +78,7 @@ words highlighted, and a marker where lines were removed. Step through the chang
 - **Nothing is overwritten.** If you were typing when the file changed, a banner lets you keep your
   version or load the new one.
 - **Local history.** mlisb keeps earlier versions of each file for 30 days. Compare with any of
-  them, or restore one (⌃⌘H).
+  them, with the changed words highlighted, or restore one (⌃⌘H).
 - **Follows the agent.** `mlisb hook install` connects it to Claude Code: every Markdown file the
   agent writes opens in mlisb, without taking focus from your terminal.
 

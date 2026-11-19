@@ -41,8 +41,8 @@ Generated from the packages bundled into the diagram page when this copy of mlis
 
 ${list.join('\n\n')}
 `);
-writeFileSync('../app/Credits.html', `<html><body style="font: 11px -apple-system; text-align: center">
-Third-party notices and licenses: <b>Help → Third-Party Notices</b>.
+writeFileSync('../app/Credits.html', `<html><head><meta charset="utf-8"></head><body style="font: 11px -apple-system; text-align: center">
+Third-party notices and licenses: <b>Help &rarr; Third-Party Notices</b>.
 </body></html>
 `);
 console.log(`notices: ${list.length} bundled packages`);

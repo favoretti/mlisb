@@ -38,7 +38,7 @@ When a file changes on disk while it is open, mlisb reloads it and marks what is
 
 - ⌥⌘↓ and ⌥⌘↑ step through the changes.
 - **Mark Reviewed** (⌥⌘R) clears the marks.
-- **Version History** (⌃⌘H) compares with an earlier version, or restores one. Versions are kept for 30 days.
+- **Version History** (⌃⌘H) compares with an earlier version, or restores one. The words that changed are highlighted within each line; drag the window's edge to make it bigger. Versions are kept for 30 days.
 
 If you were typing when the file changed, a banner lets you keep your version or load the new one.
 

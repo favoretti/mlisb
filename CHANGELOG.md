@@ -8,6 +8,14 @@ What changed in each released version of mlisb, newest first. The format follows
 
 Nothing yet.
 
+## [0.1.12] - 2026-11-20
+
+### Fixed
+
+- **Version History** shows each line in full: long lines wrap instead of running off the edge, and
+  the words that changed inside a line are highlighted. The window can be resized and keeps its size.
+- The About window shows "Help → Third-Party Notices" with a real arrow instead of garbled characters.
+
 ## [0.1.11] - 2026-11-19
 
 ### Fixed
@@ -155,7 +163,8 @@ First release.
 - Settings for text size and line width.
 - Automatic updates, a Homebrew cask, and third-party license notices in the About window.
 
-[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.11...HEAD
+[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.12...HEAD
+[0.1.12]: https://github.com/favoretti/mlisb/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/favoretti/mlisb/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/favoretti/mlisb/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/favoretti/mlisb/compare/v0.1.8...v0.1.9
