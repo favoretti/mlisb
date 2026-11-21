@@ -111,5 +111,6 @@ than from memory.
 - `bin/mlisb`: the command-line script.
 - `docs/`: this page and the screenshots the README shows.
 - `CHANGELOG.md`: what changed in each version.
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `ACCESSIBILITY.md` and `.github/ISSUE_TEMPLATE/`: how to report problems and contribute.
 - `scripts/`: the release build and the release-notes extractor.
 - `PLAN.md`: the plan and status.

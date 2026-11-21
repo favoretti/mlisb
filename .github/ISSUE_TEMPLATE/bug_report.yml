@@ -1,0 +1,51 @@
+name: Bug report
+description: Something broke, crashed or behaves oddly.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If a document only *looks* different from github.com, use the **Rendering difference** form instead. Security problems go through [private reporting](https://github.com/favoretti/mlisb/security/advisories/new), not here.
+  - type: input
+    id: version
+    attributes:
+      label: mlisb version
+      description: mlisb → About mlisb
+      placeholder: 0.1.13
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: macOS 27.2
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: And what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the file below
+        2. Click into the second heading
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: markdown
+    attributes:
+      label: Markdown that shows it
+      description: Paste a few lines, or attach the file. Leave out anything private.
+      render: markdown
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, crash log, anything else
+      description: Drag images or files here. A crash log is in Console → Crash Reports, named mlisb-….

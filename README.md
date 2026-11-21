@@ -182,6 +182,13 @@ GitHub is the reference for how a document should look. These are the known diff
 - A diagram is fitted to the window width when it is drawn. It does not refit while the window is
   being resized.
 
+## Contributing
+
+Bug reports, rendering differences and pull requests are welcome; [CONTRIBUTING.md](CONTRIBUTING.md)
+says how. Report security problems privately as described in [SECURITY.md](SECURITY.md), and
+accessibility barriers as in [ACCESSIBILITY.md](ACCESSIBILITY.md). Everyone taking part follows the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Development
 
 Building, testing and releasing are described in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). What

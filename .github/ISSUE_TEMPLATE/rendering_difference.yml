@@ -1,0 +1,38 @@
+name: Rendering difference
+description: A document looks different in mlisb than on github.com.
+labels: [rendering]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        GitHub is the reference for how Markdown should look, so a difference is a bug. Please check the [known differences](https://github.com/favoretti/mlisb#where-it-differs-from-github) first.
+  - type: input
+    id: version
+    attributes:
+      label: mlisb version
+      description: mlisb → About mlisb
+      placeholder: 0.1.13
+    validations:
+      required: true
+  - type: textarea
+    id: markdown
+    attributes:
+      label: Markdown
+      description: The smallest piece of Markdown that shows the difference.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: github
+    attributes:
+      label: How github.com shows it
+      description: A screenshot, or a link to a file or gist on GitHub.
+    validations:
+      required: true
+  - type: textarea
+    id: mlisb
+    attributes:
+      label: How mlisb shows it
+      description: A screenshot. Say whether it is light or dark mode, and whether the caret was inside the block.
+    validations:
+      required: true
