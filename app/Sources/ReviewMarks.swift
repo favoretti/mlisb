@@ -2,7 +2,7 @@ import MlisbKit
 import SwiftUI
 
 extension View {
-    /// Change marks over the editor, the review bar and the history sheet.
+    /// Change marks over the editor, the removed-text strip and the history sheet.
     func reviewUI(_ document: Document) -> some View { modifier(ReviewModifier(document: document)) }
 }
 
@@ -12,9 +12,7 @@ private struct ReviewModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(ReviewHost(changes: document.review.changes))
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if !document.review.changes.isEmpty { ReviewBar(document: document) }
-            }
+            .safeAreaInset(edge: .top, spacing: 0) { RemovedStrip(document: document) }
             .sheet(isPresented: $document.showingHistory) { HistoryView(document: document) }
     }
 }
@@ -38,28 +36,78 @@ private extension NSRange {
     }
 }
 
-private struct ReviewBar: View {
+/// The review controls in the window's toolbar, beside the table of contents.
+struct ReviewToolbar: ToolbarContent {
+    let document: Document
+
+    var body: some ToolbarContent {
+        let changes = document.review.changes
+        if !changes.isEmpty {
+            ToolbarItem { ReviewSummary(counts: document.review.counts) }
+            ToolbarItem {
+                ControlGroup {
+                    Button { document.step(forward: false) } label: { Label("Previous Change", systemImage: "chevron.up") }
+                        .help("Previous Change (⌥⌘↑)")
+                    Button { document.step(forward: true) } label: { Label("Next Change", systemImage: "chevron.down") }
+                        .help("Next Change (⌥⌘↓)")
+                }
+            }
+            ToolbarItem {
+                Button { document.markReviewed() } label: { Label("Mark Reviewed", systemImage: "checkmark").labelStyle(.titleAndIcon) }
+                    .prominentInToolbar()
+                    .help("Clear the change marks (⌥⌘R)")
+            }
+        }
+        ToolbarItem {
+            Button { document.showingHistory = true } label: { Label("Version History", systemImage: "clock.arrow.circlepath") }
+                .help("Version History (⌃⌘H)")
+        }
+    }
+}
+
+private extension View {
+    /// macOS 26 toolbars draw every button as glass and ignore `.borderedProminent`.
+    @ViewBuilder func prominentInToolbar() -> some View {
+        if #available(macOS 26, *) { buttonStyle(.glassProminent) } else { buttonStyle(.borderedProminent) }
+    }
+}
+
+/// The counts in the colours of their marks in the margin.
+private struct ReviewSummary: View {
+    let counts: (added: Int, modified: Int, removed: Int)
+
+    var body: some View {
+        let parts = [(counts.added, "added", Color.green), (counts.modified, "changed", Color.orange), (counts.removed, "removed", Color.red)]
+            .filter { $0.0 > 0 }
+        HStack(spacing: 8) {
+            ForEach(parts, id: \.1) { count, word, color in
+                HStack(spacing: 4) {
+                    Circle().fill(color).frame(width: 7, height: 7)
+                    Text("\(count) \(word)").monospacedDigit()
+                }
+            }
+        }
+        .padding(.horizontal, 6)
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// What a removal took out, while the selected change is one; the margin only shows where.
+private struct RemovedStrip: View {
     let document: Document
 
     var body: some View {
-        let counts = document.review.counts
-        let summary = [(counts.added, "added"), (counts.modified, "changed"), (counts.removed, "removed")]
-            .filter { $0.0 > 0 }.map { "\($0.0) \($0.1)" }.joined(separator: " · ")
-        HStack(spacing: 8) {
-            Text(summary).monospacedDigit()
-            if let current = document.current, current.kind == .removed, document.review.changes.contains(current) {
-                Text("Removed: “\(current.oldText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80))”")
+        if let current = document.current, current.kind == .removed, document.review.changes.contains(current) {
+            HStack(spacing: 6) {
+                Image(systemName: "minus.circle.fill").foregroundStyle(.red)
+                Text("Removed: “\(current.oldText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))”")
                     .lineLimit(1).truncationMode(.tail).foregroundStyle(.secondary)
+                Spacer(minLength: 0)
             }
-            Spacer()
-            Button { document.step(forward: false) } label: { Image(systemName: "chevron.up") }.help("Previous Change")
-            Button { document.step(forward: true) } label: { Image(systemName: "chevron.down") }.help("Next Change")
-            Button("Mark Reviewed") { document.markReviewed() }
-            Button { document.showingHistory = true } label: { Image(systemName: "clock.arrow.circlepath") }
-                .help("Version History")
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(.bar)
         }
-        .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(.bar)
     }
 }
 

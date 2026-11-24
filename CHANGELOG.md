@@ -6,7 +6,16 @@ What changed in each released version of mlisb, newest first. The format follows
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- The review controls moved from a bar along the bottom to the toolbar, top right: the counts in the colours of
+  their marks in the margin, previous and next change, a prominent **Mark Reviewed**, and **Version History**,
+  which is now there even when nothing changed. When the selected change is a removal, a strip above the text
+  shows what was taken out.
+
+### Added
+
+- Right-clicking a tab in the list down the left side offers **Reveal in Finder** and **Copy Path**.
 
 ## [0.1.13] - 2026-11-20
 

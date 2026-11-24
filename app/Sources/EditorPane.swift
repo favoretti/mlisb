@@ -33,7 +33,8 @@ struct EditorPane: View {
                 .inspectorColumnWidth(min: 160, ideal: 220, max: 400)
         }
         .toolbar {
-            Toggle(isOn: $showOutline) { Label("Table of Contents", systemImage: "list.bullet.indent") }
+            ReviewToolbar(document: document)
+            ToolbarItem { Toggle(isOn: $showOutline) { Label("Table of Contents", systemImage: "list.bullet.indent") } }
         }
         .focusedSceneValue(\.editorBus, bus)
         .focusedSceneValue(\.document, document)

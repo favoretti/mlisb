@@ -84,4 +84,32 @@ import XCTest
         try await settle()
         XCTAssertNotNil(b.contentView?.editorTextView(), "selecting the tab builds its editor")
     }
+
+    /// Each tab knows the file its window shows, for Reveal in Finder and Copy Path.
+    func testATabKnowsItsFile() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tabs-\(UUID())")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let urls = try ["a.md", "b.md"].map { name in
+            let url = dir.appendingPathComponent(name)
+            try Data("# \(name)\n".utf8).write(to: url)
+            return url
+        }
+        let windows = urls.map { url in
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 400),
+                                  styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.tabbingMode = .preferred
+            window.contentView = NSHostingView(rootView: WorkspaceView(root: .constant(url)))
+            return window
+        }
+        defer { windows.reversed().forEach { $0.close() } }
+        windows[0].orderFront(nil)
+        windows[0].addTabbedWindow(windows[1], ordered: .above)
+        for _ in 0..<20 { try await Task.sleep(for: .milliseconds(50)) }
+        let tabs = WindowTabs()
+        tabs.window = windows[0]
+        tabs.refresh()
+        XCTAssertEqual(tabs.tabs.map(\.url), urls)
+    }
 }

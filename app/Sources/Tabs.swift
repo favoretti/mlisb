@@ -16,6 +16,7 @@ enum TabLayout: String, CaseIterable, Identifiable {
         let id: ObjectIdentifier
         let title: String
         let isFolder: Bool
+        let url: URL?
     }
 
     private(set) var tabs: [Tab] = []
@@ -25,6 +26,8 @@ enum TabLayout: String, CaseIterable, Identifiable {
     @ObservationIgnored weak var window: NSWindow?
     /// The windows that show a folder, so a tab can say so without asking the disk on every update.
     @ObservationIgnored fileprivate static let folders = NSHashTable<NSWindow>.weakObjects()
+    /// The file or folder each window shows, for a tab's Reveal in Finder.
+    @ObservationIgnored fileprivate static let roots = NSMapTable<NSWindow, NSURL>.weakToStrongObjects()
 
     /// `tabbedWindows` and not `tabGroup`: reading `tabGroup` creates a group, and a window that already
     /// has one of its own is no longer added to another window's tabs.
@@ -33,7 +36,7 @@ enum TabLayout: String, CaseIterable, Identifiable {
     func refresh() {
         let now = windows.map { window in
             Tab(id: ObjectIdentifier(window), title: window.tab.title,
-                isFolder: Self.folders.contains(window))
+                isFolder: Self.folders.contains(window), url: Self.roots.object(forKey: window) as URL?)
         }
         if now != tabs { tabs = now }
         let current = window.map { ObjectIdentifier($0.tabbedWindows == nil ? $0 : $0.tabGroup?.selectedWindow ?? $0) }
@@ -111,6 +114,7 @@ struct WindowLink: NSViewRepresentable {
             guard let window else { return }
             if window.tabbingMode != openIn.tabbingMode { window.tabbingMode = openIn.tabbingMode }
             if isFolder { WindowTabs.folders.add(window) } else { WindowTabs.folders.remove(window) }
+            if let root { WindowTabs.roots.setObject(root as NSURL, forKey: window) } else { WindowTabs.roots.removeObject(forKey: window) }
             // The title is the full path; a tab names only the file or folder.
             let name = root?.lastPathComponent ?? (reopening ? "" : "mlisb")
             if window.tab.title != name { window.tab.title = name }
@@ -212,6 +216,14 @@ struct TabStrip: View {
             Button("Close Tab") { tabs.close(tab.id) }
             Button("Close Other Tabs") { tabs.closeOthers(tab.id) }.disabled(tabs.tabs.count < 2)
             Button("Move Tab to New Window") { tabs.moveToNewWindow(tab.id) }.disabled(tabs.tabs.count < 2)
+            if let url = tab.url {
+                Divider()
+                Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                Button("Copy Path") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(url.standardizedFileURL.path, forType: .string)
+                }
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
