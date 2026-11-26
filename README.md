@@ -115,6 +115,8 @@ Tool…** and run the one line it shows; Settings → Setup shows whether the co
   a Quick Look preview for images and PDFs.
 - **GitHub Flavored Markdown.** Tables, task lists, alerts, footnotes, front matter, reference
   links, strikethrough, autolinks and a safe subset of HTML.
+- **Line numbers** in the margin, from View → Line Numbers (⌥⌘L). They count the file's lines, so
+  the number beside a line is the one `mlisb file.md:N` opens.
 - **Paragraphs wrap to the window**, as on GitHub, even when the file was wrapped by hand. The file
   keeps its own line breaks, and Source Mode shows them.
 - **Wide tables and code blocks** spread into the free space beside the text before they wrap or scroll.
@@ -142,6 +144,7 @@ Tool…** and run the one line it shows; Settings → Setup shows whether the co
 | General | Show tabs | Across the top (the default) or as a list down the left side. |
 | Reading | Text size | 12 to 24 points. |
 | Reading | Line width | Narrow, Medium (the default), Wide, or Full width to use the whole window. |
+| Reading | Show line numbers | Numbers each line of the file in the left margin, as View → Line Numbers (⌥⌘L) does. Off by default. |
 | Setup | Default app for Markdown files | Make Default opens every Markdown file with mlisb. |
 | Setup | Command line tool | Shows where `mlisb` is installed, or how to install it. |
 | Setup | Claude Code | Copies the `mlisb hook install` command. |
@@ -157,6 +160,7 @@ Tool…** and run the one line it shows; Settings → Setup shows whether the co
 | ⇧⌘F | Find in Folder |
 | ⌘F | Find in the document |
 | ⌘/ | Source mode |
+| ⌥⌘L | Line numbers |
 | ⇧⌘T | Table of contents |
 | ⇧⌘M | Problems |
 | ⌥⌘↓ / ⌥⌘↑ | Next / previous change |

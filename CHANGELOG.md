@@ -6,7 +6,11 @@ What changed in each released version of mlisb, newest first. The format follows
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Line numbers.** View → Line Numbers (⌥⌘L), or Settings → Reading, numbers each line of the file in
+  the left margin. The number beside a line is the one `mlisb file.md:N` opens, also where a paragraph's
+  lines are shown joined. Off by default.
 
 ## [0.1.13] - 2026-11-20
 
