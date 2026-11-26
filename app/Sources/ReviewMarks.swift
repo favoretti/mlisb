@@ -93,66 +93,18 @@ private struct ReviewHost: NSViewRepresentable {
     let changes: [TextChange]
 
     func makeNSView(context: Context) -> NSView { NSView() }
-    func makeCoordinator() -> Coordinator { Coordinator() }
-    func updateNSView(_ view: NSView, context: Context) { context.coordinator.update(view, changes) }
-
-    @MainActor final class Coordinator {
-        let overlay = ReviewOverlay()
-        private var observers: [NSObjectProtocol] = []
-
-        func update(_ view: NSView, _ changes: [TextChange], tries: Int = 0) {
-            overlay.changes = changes
-            guard let textView = view.window?.contentView?.editorTextView() else {
-                guard tries < 30 else { return }
-                Task {
-                    try? await Task.sleep(for: .milliseconds(100))
-                    update(view, changes, tries: tries + 1)
-                }
-                return
-            }
-            guard overlay.superview !== textView else { return }
-            observers.forEach(NotificationCenter.default.removeObserver)
-            overlay.textView = textView
-            overlay.frame = textView.bounds
-            overlay.autoresizingMask = [.width, .height]
-            textView.addSubview(overlay)
-            observers = [NSText.didChangeNotification, NSView.frameDidChangeNotification].map {
-                NotificationCenter.default.addObserver(forName: $0, object: textView, queue: .main) { [overlay] _ in
-                    MainActor.assumeIsolated {
-                        overlay.needsDisplay = true
-                        // Layout of the edited text finishes after the notification.
-                        DispatchQueue.main.async { overlay.needsDisplay = true }
-                    }
-                }
-            }
-        }
+    func makeCoordinator() -> ReviewOverlay { ReviewOverlay() }
+    func updateNSView(_ view: NSView, context: Context) {
+        context.coordinator.changes = changes
+        context.coordinator.attach(from: view)
     }
 }
 
-final class ReviewOverlay: NSView {
+final class ReviewOverlay: EditorOverlay {
     var changes: [TextChange] = [] { didSet { needsDisplay = true } }
-    weak var textView: NSTextView?
-    private var signature = CGFloat.zero
 
-    override var isFlipped: Bool { true }
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
-
-    override func viewDidMoveToSuperview() {
-        super.viewDidMoveToSuperview()
-        guard superview != nil else { return }
-        // The engine relays out without telling us (images, folded syntax), so poll the text height.
-        Task { [weak self] in
-            while true {
-                try? await Task.sleep(for: .milliseconds(250))
-                guard let self, self.superview != nil else { return }
-                let height = self.textView?.textLayoutManager?.usageBoundsForTextContainer.height ?? 0
-                if height != self.signature {
-                    self.signature = height
-                    self.needsDisplay = true
-                }
-            }
-        }
-    }
+    /// Left edge of the change bars, just left of the text.
+    static func barX(_ textOrigin: NSPoint) -> CGFloat { max(2, textOrigin.x - 8) }
 
     override func draw(_ dirtyRect: NSRect) {
         guard let textView, let layout = textView.textLayoutManager, let content = layout.textContentManager else { return }
@@ -178,7 +130,7 @@ final class ReviewOverlay: NSView {
             return r
         }
 
-        let barX = max(2, origin.x - 8)
+        let barX = Self.barX(origin)
         for change in changes {
             switch change.kind {
             case .removed:

@@ -11,6 +11,8 @@ struct EditorPane: View {
     @AppStorage("showOutline") private var showOutline = false
     @AppStorage("textSize") private var textSize = ReadingSettings.defaultSize
     @AppStorage("lineWidth") private var lineWidth = LineWidth.medium
+    @AppStorage("showLineNumbers") private var showLineNumbers = false
+    @State private var lineDigits = 1
     @State private var showFind = false
     @Environment(\.openWindow) private var openWindow
 
@@ -37,7 +39,14 @@ struct EditorPane: View {
         }
         .focusedSceneValue(\.editorBus, bus)
         .focusedSceneValue(\.document, document)
+        .background {
+            if showLineNumbers {
+                LineNumberHost(textSize: CGFloat(ReadingSettings.clamp(textSize))) { lineDigits = $0 }
+            }
+        }
         .reviewUI(document)
+        // Read here rather than in the body, which would then run on every keystroke.
+        .onAppear { lineDigits = LineNumbers.digits(lines: LineNumbers.starts(in: document.text).count) }
         .onReceive(NotificationCenter.default.publisher(for: bus.name("showFind"))) { _ in showFind = true }
         .onChange(of: LineRequests.shared.pending, initial: true) { _, request in
             if let request, request.matches(document.url) { apply(request) }
@@ -66,9 +75,11 @@ struct EditorPane: View {
         config.revealAllSyntax = sourceMode
         // A centered column of at most the chosen width that shrinks with the pane. (The engine's
         // own readingWidth is a fixed width and clips in a narrow window.)
-        let inset = ReadingSettings.sideInset(paneWidth: width, width: lineWidth)
+        let gutter = showLineNumbers
+            ? LineNumbers.gutterWidth(digits: lineDigits, textSize: CGFloat(ReadingSettings.clamp(textSize))) : 0
+        let inset = ReadingSettings.sideInset(paneWidth: width, width: lineWidth, gutter: gutter)
         config.textInsets = TextInsets(horizontal: inset, vertical: 12)
-        config.wideTableOverflow = inset - ReadingSettings.sidePadding
+        config.wideTableOverflow = inset - ReadingSettings.sidePadding - gutter
         // Nothing may change what the user typed.
         config.lists.arrowReplacementEnabled = false
         config.spellChecking.automaticQuoteSubstitution = false
