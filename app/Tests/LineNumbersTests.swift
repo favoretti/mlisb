@@ -95,8 +95,8 @@ import XCTest
                                        attributes: [.font: NSFont.systemFont(ofSize: 0.1), .paragraphStyle: folded]))
         text.append(plain("after"))
         let labels = overlay(text).labels(in: NSRect(x: 0, y: 0, width: 800, height: 2000))
-        XCTAssertEqual(labels.first?.number, 1)
-        XCTAssertTrue(labels.map(\.number).contains(2))
+        // A folded line's number would sit beside the next visible line, so the visible line keeps its own.
+        XCTAssertEqual(labels.map(\.number), [1, 6])
         assertNoOverlap(labels)
     }
 
