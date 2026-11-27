@@ -6,6 +6,12 @@ What changed in each released version of mlisb, newest first. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The review controls in the toolbar are quieter. The counts of added, changed and removed lines
+  show under the window's title instead of in a pill of their own, and previous, next and
+  **Mark Reviewed** share one plain button group instead of a filled blue button.
+
 ## [0.1.14] - 2026-11-27
 
 ### Changed

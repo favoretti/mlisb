@@ -12,6 +12,7 @@ private struct ReviewModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(ReviewHost(changes: document.review.changes))
+            .navigationSubtitle(reviewSubtitle(document.review.counts))
             .sheet(isPresented: $document.showingHistory) { HistoryView(document: document) }
     }
 }
@@ -35,27 +36,31 @@ private extension NSRange {
     }
 }
 
-/// The review controls in the window's toolbar, beside the table of contents.
+/// The window subtitle while there are changes, e.g. "2 added · 1 removed"; empty hides it.
+func reviewSubtitle(_ counts: (added: Int, modified: Int, removed: Int)) -> String {
+    [(counts.added, "added"), (counts.modified, "changed"), (counts.removed, "removed")]
+        .filter { $0.0 > 0 }
+        .map { "\($0.0) \($0.1)" }
+        .joined(separator: " · ")
+}
+
+/// The review controls in the window's toolbar, beside the table of contents. The counts are the
+/// window's subtitle.
 struct ReviewToolbar: ToolbarContent {
     let document: Document
 
     var body: some ToolbarContent {
-        let changes = document.review.changes
-        if !changes.isEmpty {
-            ToolbarItem { ReviewSummary(counts: document.review.counts) }
-            ToolbarItem {
-                ControlGroup {
-                    Button { document.step(forward: false) } label: { Label("Previous Change", systemImage: "chevron.up") }
-                        .help("Previous Change (⌥⌘↑)")
-                    Button { document.step(forward: true) } label: { Label("Next Change", systemImage: "chevron.down") }
-                        .help("Next Change (⌥⌘↓)")
-                }
-            }
-            ToolbarItem {
+        if !document.review.changes.isEmpty {
+            ToolbarItemGroup {
+                Button { document.step(forward: false) } label: { Label("Previous Change", systemImage: "chevron.up") }
+                    .help("Previous Change (⌥⌘↑)")
+                Button { document.step(forward: true) } label: { Label("Next Change", systemImage: "chevron.down") }
+                    .help("Next Change (⌥⌘↓)")
                 Button { document.markReviewed() } label: { Label("Mark Reviewed", systemImage: "checkmark").labelStyle(.titleAndIcon) }
-                    .prominentInToolbar()
                     .help("Clear the change marks (⌥⌘R)")
             }
+            // macOS 26 merges neighbouring items into one glass capsule; keep this group apart.
+            if #available(macOS 26, *) { ToolbarSpacer(.fixed) }
         }
         if !document.isBundled {
             ToolbarItem {
@@ -63,34 +68,6 @@ struct ReviewToolbar: ToolbarContent {
                     .help("Version History (⌃⌘H)")
             }
         }
-    }
-}
-
-private extension View {
-    /// macOS 26 toolbars draw every button as glass and ignore `.borderedProminent`.
-    @ViewBuilder func prominentInToolbar() -> some View {
-        if #available(macOS 26, *) { buttonStyle(.glassProminent) } else { buttonStyle(.borderedProminent) }
-    }
-}
-
-/// The counts in the colours of their marks in the margin.
-private struct ReviewSummary: View {
-    let counts: (added: Int, modified: Int, removed: Int)
-
-    var body: some View {
-        let parts = [(counts.added, "added", Color.green), (counts.modified, "changed", Color.orange), (counts.removed, "removed", Color.red)]
-            .filter { $0.0 > 0 }
-        HStack(spacing: 8) {
-            ForEach(parts, id: \.1) { count, word, color in
-                HStack(spacing: 4) {
-                    Circle().fill(color).frame(width: 7, height: 7)
-                    Text("\(count) \(word)").monospacedDigit()
-                }
-            }
-        }
-        .padding(.horizontal, 6)
-        .fixedSize()
-        .accessibilityElement(children: .combine)
     }
 }
 

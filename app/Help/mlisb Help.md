@@ -37,7 +37,7 @@ print("Markdown like it should be")
 
 When a file changes on disk while it is open, mlisb reloads it and marks what is different since you last looked: added lines in green, rewritten lines in amber, and a marker where lines were removed.
 
-The counts and the review buttons sit in the toolbar, top right: the counts in the colours of their marks, then the previous and next change, **Mark Reviewed** and **Version History**.
+The counts show under the window's title, for example "2 added · 1 removed". The review buttons sit in the toolbar, top right: the previous and next change, **Mark Reviewed** and **Version History**.
 
 - ⌥⌘↓ and ⌥⌘↑ step through the changes. On a removal, a note floating at the bottom of the text shows what was taken out.
 - **Mark Reviewed** (⌥⌘R) clears the marks.
