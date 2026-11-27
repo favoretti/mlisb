@@ -11,7 +11,7 @@ body:
     attributes:
       label: mlisb version
       description: mlisb → About mlisb
-      placeholder: 0.1.15
+      placeholder: 0.1.16
     validations:
       required: true
   - type: input

@@ -6,6 +6,8 @@ What changed in each released version of mlisb, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.1.16] - 2026-11-27
+
 ### Changed
 
 - Reviewing changes happens in a review bar across the top of the text, there whenever a file has
@@ -206,7 +208,8 @@ First release.
 - Settings for text size and line width.
 - Automatic updates, a Homebrew cask, and third-party license notices in the About window.
 
-[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.15...HEAD
+[Unreleased]: https://github.com/favoretti/mlisb/compare/v0.1.16...HEAD
+[0.1.16]: https://github.com/favoretti/mlisb/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/favoretti/mlisb/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/favoretti/mlisb/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/favoretti/mlisb/compare/v0.1.12...v0.1.13
