@@ -70,8 +70,8 @@ rendered and source.
 
 When a file changes on disk while it is open, mlisb reloads it without asking and marks what is
 different since you last looked: added lines in green, rewritten lines in amber with the changed
-words highlighted, and a marker where lines were removed. Step through the changes with ⌥⌘↓ and
-⌥⌘↑, then press **Mark Reviewed** (⌥⌘R).
+words highlighted, and a marker where lines were removed. The counts and the review buttons sit in
+the toolbar. Step through the changes with ⌥⌘↓ and ⌥⌘↑, then press **Mark Reviewed** (⌥⌘R).
 
 <img src="docs/screenshots/review.webp" width="100%" alt="A rollout plan after an agent edited it: one task newly checked off, a sentence with its changed words highlighted, a whole new Rollback section marked in green, and a bar at the bottom reading 2 added, 2 changed, 1 removed with a Mark Reviewed button">
 
@@ -123,7 +123,8 @@ Tool…** and run the one line it shows; Settings → Setup shows whether the co
 - **The full path** of the open file is in the title bar.
 - **Saves by itself**, one second after you stop typing, in place.
 - **Tabs your way.** A newly opened file becomes a tab or its own window, and the tabs sit across the
-  top or in a list down the left side, whose width you drag.
+  top or in a list down the left side, whose width you drag. Right-click a tab in the list to reveal
+  its file in Finder or copy its path.
 - **Comes back as you left it.** The windows you had open reopen at launch, including after an
   update. A tab in the background loads its document when you first switch to it.
 - **Export** to HTML, PDF, JPEG and ePub. **Copy as** plain text, rich text, Markdown or HTML.

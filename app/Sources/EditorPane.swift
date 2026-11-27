@@ -24,6 +24,7 @@ struct EditorPane: View {
         GeometryReader { geometry in
             editor(width: geometry.size.width)
         }
+        .overlay(alignment: .bottom) { RemovedNote(document: document) }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 banner
@@ -35,7 +36,8 @@ struct EditorPane: View {
                 .inspectorColumnWidth(min: 160, ideal: 220, max: 400)
         }
         .toolbar {
-            Toggle(isOn: $showOutline) { Label("Table of Contents", systemImage: "list.bullet.indent") }
+            ReviewToolbar(document: document)
+            ToolbarItem { Toggle(isOn: $showOutline) { Label("Table of Contents", systemImage: "list.bullet.indent") } }
         }
         .focusedSceneValue(\.editorBus, bus)
         .focusedSceneValue(\.document, document)

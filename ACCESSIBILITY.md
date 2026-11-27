@@ -31,7 +31,7 @@ reader we test with.
 - Task-list checkboxes and note icons have no spoken label of their own.
 - Increase Contrast, Reduce Transparency and Reduce Motion have not been checked systematically.
 - The app has not had a full VoiceOver audit. The tab bar and the text view have had fixes, the
-  sidebar, Open Quickly and the review bar have not been looked at closely.
+  sidebar, Open Quickly and the review controls in the toolbar have not been looked at closely.
 
 ## Reporting a barrier
 

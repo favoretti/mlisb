@@ -37,7 +37,9 @@ print("Markdown like it should be")
 
 When a file changes on disk while it is open, mlisb reloads it and marks what is different since you last looked: added lines in green, rewritten lines in amber, and a marker where lines were removed.
 
-- ⌥⌘↓ and ⌥⌘↑ step through the changes.
+The counts and the review buttons sit in the toolbar, top right: the counts in the colours of their marks, then the previous and next change, **Mark Reviewed** and **Version History**.
+
+- ⌥⌘↓ and ⌥⌘↑ step through the changes. On a removal, a note floating at the bottom of the text shows what was taken out.
 - **Mark Reviewed** (⌥⌘R) clears the marks.
 - **Version History** (⌃⌘H) compares with an earlier version, or restores one. The words that changed are highlighted within each line; drag the window's edge to make it bigger. Versions are kept for 30 days.
 
@@ -55,7 +57,7 @@ Open **mlisb → Settings** (⌘,). Under **General**:
 
 - **Reopen windows from last time.** On by default, so the app comes back as you left it. While the windows reopen, they say so; a tab you have not looked at yet loads its document when you first switch to it.
 - **Open files in** a new tab or a new window.
-- **Show tabs** across the top, or as a list down the left side. Drag the list's right edge to make it wider or narrower.
+- **Show tabs** across the top, or as a list down the left side. Drag the list's right edge to make it wider or narrower. Right-click a tab in the list to reveal its file in Finder or copy its path.
 
 Under **Setup**:
 
