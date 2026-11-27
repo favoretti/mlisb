@@ -109,7 +109,8 @@ than from memory.
 - `render/`: web source for the diagram page (mermaid and d2 WASM, bundled with esbuild).
 - `Vendor/MarkdownEngine/`: our fork of nodes-app/swift-markdown-engine 0.16.0. Changes are listed in its `PATCHES.md`.
 - `bin/mlisb`: the command-line script.
-- `docs/`: this page and the screenshots the README shows.
+- `docs/`: this page, the screenshots the README shows, and in `docs/demo/` the project they show
+  with how to retake them.
 - `CHANGELOG.md`: what changed in each version.
 - `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `ACCESSIBILITY.md` and `.github/ISSUE_TEMPLATE/`: how to report problems and contribute.
 - `scripts/`: the release build and the release-notes extractor.
