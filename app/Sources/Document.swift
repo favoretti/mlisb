@@ -146,6 +146,18 @@ import Observation
         current = nil
     }
 
+    /// The change the reader stepped to, if it is still one of the changes (typing can replace it).
+    var currentChange: TextChange? { current.flatMap { c in review.changes.first { $0 == c } } }
+
+    /// Marks the selected change reviewed and steps to the next one.
+    func markCurrentReviewed() {
+        guard let change = currentChange else { return }
+        review.markReviewed(change, current: text)
+        try? history.setReviewedBaseline(review.baseline, for: url)
+        current = nil
+        if !review.changes.isEmpty { step(forward: true) }
+    }
+
     /// Keeps the replaced text in history, then makes `version` the text as an ordinary edit.
     func restore(_ version: HistoryStore.Version) throws {
         guard conflictingDiskText == nil, !isReadOnly else { return }

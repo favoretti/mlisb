@@ -183,6 +183,26 @@ struct ChangeReviewTests {
         #expect(r.baseline == "b\n" && r.changes.isEmpty)
     }
 
+    @Test func markOneReviewedLeavesTheOthers() {
+        let current = "a\nB\nc\nnew\nd\n"
+        var r = ChangeReview(baseline: "a\nb\nc\nd\ne\n", current: current)
+        #expect(r.counts == (added: 1, modified: 1, removed: 1))
+        // Each step: the remaining changes are exactly what a fresh diff against the new baseline gives.
+        for kind in [TextChange.Kind.added, .removed, .modified] {
+            let change = r.changes.first { $0.kind == kind }!
+            r.markReviewed(change, current: current)
+            #expect(!r.changes.contains(change))
+            #expect(TextDiff.changes(from: r.baseline, to: current) == r.changes)
+        }
+        #expect(r.baseline == current && r.changes.isEmpty)
+    }
+
+    @Test func markReviewedIgnoresAStaleChange() {
+        var r = ChangeReview(baseline: "a\n", current: "b\n")
+        r.markReviewed(TextChange(kind: .added, range: nsr(0, 0), wordRanges: [], oldText: ""), current: "b\n")
+        #expect(r.baseline == "a\n" && r.changes.count == 1)
+    }
+
     @Test func nextPreviousWrap() throws {
         let r = ChangeReview(baseline: "1\n2\n3\n4\n5\n", current: "1\nX\n3\nY\n5\n")
         #expect(r.next(after: 0)?.range.location == 2)

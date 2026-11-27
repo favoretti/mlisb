@@ -80,14 +80,30 @@ extension NSView {
 extension NSTextView {
     /// Selects `range` and scrolls it into view. The text is laid out lazily, so lay it all out first:
     /// until then a heading far down has no position to scroll to.
+    /// Scrolls the clip view itself: `scrollToVisible` stops at the engine's container view and moves nothing.
     func reveal(_ range: NSRange) {
         window?.makeFirstResponder(self)
         setSelectedRange(range)
-        guard let tlm = textLayoutManager else { return scrollRangeToVisible(range) }
+        guard let tlm = textLayoutManager, let scrollView = enclosingScrollView else { return scrollRangeToVisible(range) }
         tlm.ensureLayout(for: tlm.documentRange)
-        if let location = tlm.location(tlm.documentRange.location, offsetBy: range.location),
-           let fragment = tlm.textLayoutFragment(for: location) {
-            scrollToVisible(fragment.layoutFragmentFrame.insetBy(dx: 0, dy: -80))
+        guard let location = tlm.location(tlm.documentRange.location, offsetBy: range.location) else { return }
+        // The range's own lines: a fragment is a whole paragraph or block, which can start far above.
+        let end = tlm.location(location, offsetBy: range.length) ?? location
+        var lines = CGRect.null
+        tlm.enumerateTextSegments(in: NSTextRange(location: location, end: end) ?? NSTextRange(location: location),
+                                  type: .standard, options: []) { _, frame, _, _ in
+            lines = lines.union(frame)
+            return true
         }
+        guard !lines.isNull else { return }
+        let clip = scrollView.contentView
+        var target = convert(lines.offsetBy(dx: textContainerOrigin.x, dy: textContainerOrigin.y), to: clip)
+        target.size.height = min(target.height, clip.bounds.height / 2)
+        let visible = clip.bounds
+        let context = min(80, visible.height / 4)
+        guard target.minY - context < visible.minY || target.maxY + context > visible.maxY else { return }
+        let maxY = max(0, (scrollView.documentView?.frame.height ?? 0) - visible.height)
+        clip.scroll(to: NSPoint(x: visible.origin.x, y: min(max(0, target.minY - context), maxY)))
+        scrollView.reflectScrolledClipView(clip)
     }
 }

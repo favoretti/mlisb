@@ -24,9 +24,9 @@ struct EditorPane: View {
         GeometryReader { geometry in
             editor(width: geometry.size.width)
         }
-        .overlay(alignment: .bottom) { RemovedNote(document: document) }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
+                ReviewBar(document: document)
                 banner
                 if showFind { FindBar(bus: bus, isPresented: $showFind) }
             }

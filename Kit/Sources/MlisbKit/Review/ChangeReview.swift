@@ -20,6 +20,17 @@ public struct ChangeReview: Sendable {
         changes = []
     }
 
+    /// One change has been reviewed: the baseline takes that change's text from `current`; the other
+    /// changes stay as they are. No-op if `change` isn't one of `changes`.
+    public mutating func markReviewed(_ change: TextChange, current: String) {
+        guard let i = changes.firstIndex(of: change) else { return }
+        let net = changes[..<i].reduce(0) { $0 + $1.range.length - $1.oldText.utf16.count }
+        let old = NSRange(location: change.range.location - net, length: change.oldText.utf16.count)
+        let new = (current as NSString).substring(with: change.range)
+        baseline = (baseline as NSString).replacingCharacters(in: old, with: new)
+        changes.remove(at: i)
+    }
+
     /// The reader typed: `range` (UTF-16, in the text before the edit) was replaced by `replacement`.
     public mutating func localEdit(range: NSRange, replacement: String) {
         let delta = replacement.utf16.count - range.length

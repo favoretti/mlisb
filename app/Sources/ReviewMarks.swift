@@ -12,7 +12,6 @@ private struct ReviewModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(ReviewHost(changes: document.review.changes))
-            .navigationSubtitle(reviewSubtitle(document.review.counts))
             .sheet(isPresented: $document.showingHistory) { HistoryView(document: document) }
     }
 }
@@ -36,32 +35,11 @@ private extension NSRange {
     }
 }
 
-/// The window subtitle while there are changes, e.g. "2 added · 1 removed"; empty hides it.
-func reviewSubtitle(_ counts: (added: Int, modified: Int, removed: Int)) -> String {
-    [(counts.added, "added"), (counts.modified, "changed"), (counts.removed, "removed")]
-        .filter { $0.0 > 0 }
-        .map { "\($0.0) \($0.1)" }
-        .joined(separator: " · ")
-}
-
-/// The review controls in the window's toolbar, beside the table of contents. The counts are the
-/// window's subtitle.
+/// Version History in the toolbar; the review controls are in `ReviewBar`.
 struct ReviewToolbar: ToolbarContent {
     let document: Document
 
     var body: some ToolbarContent {
-        if !document.review.changes.isEmpty {
-            ToolbarItemGroup {
-                Button { document.step(forward: false) } label: { Label("Previous Change", systemImage: "chevron.up") }
-                    .help("Previous Change (⌥⌘↑)")
-                Button { document.step(forward: true) } label: { Label("Next Change", systemImage: "chevron.down") }
-                    .help("Next Change (⌥⌘↓)")
-                Button { document.markReviewed() } label: { Label("Mark Reviewed", systemImage: "checkmark").labelStyle(.titleAndIcon) }
-                    .help("Clear the change marks (⌥⌘R)")
-            }
-            // macOS 26 merges neighbouring items into one glass capsule; keep this group apart.
-            if #available(macOS 26, *) { ToolbarSpacer(.fixed) }
-        }
         if !document.isBundled {
             ToolbarItem {
                 Button { document.showingHistory = true } label: { Label("Version History", systemImage: "clock.arrow.circlepath") }
@@ -71,24 +49,92 @@ struct ReviewToolbar: ToolbarContent {
     }
 }
 
-/// What a removal took out, while the selected change is one; the margin only shows where.
-/// Floats over the editor so stepping on and off a removal doesn't move the text; `reveal` keeps
-/// 80pt clear below the change, more than this takes.
-struct RemovedNote: View {
+extension TextChange.Kind {
+    static let allKinds: [TextChange.Kind] = [.added, .modified, .removed]
+
+    var word: String {
+        switch self {
+        case .added: "added"
+        case .modified: "changed"
+        case .removed: "removed"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .added: .green
+        case .modified: .orange
+        case .removed: .red
+        }
+    }
+}
+
+/// What the bar says: where the reader is among the changes, or how many there are, and what the
+/// selected change replaced.
+struct ReviewBarText: Equatable {
+    var position: String
+    var detail: String?
+
+    init(changes: [TextChange], current: TextChange?) {
+        guard let current, let i = changes.firstIndex(of: current) else {
+            let counts = TextChange.Kind.allKinds.map { kind in (kind, changes.filter { $0.kind == kind }.count) }
+            position = counts.filter { $0.1 > 0 }.map { "\($0.1) \($0.0.word)" }.joined(separator: " · ")
+            detail = nil
+            return
+        }
+        position = "Change \(i + 1) of \(changes.count) · \(current.kind.word)"
+        let old = current.oldText.split(whereSeparator: \.isNewline).joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
+        switch current.kind {
+        case .added: detail = nil
+        case .modified: detail = old.isEmpty ? nil : "Was: “\(old.prefix(300))”"
+        case .removed: detail = "Removed: “\(old.prefix(300))”"
+        }
+    }
+}
+
+/// A strip like a status bar across the top of the editor while the file has unreviewed changes.
+/// Always the same height, so stepping through changes doesn't move the text.
+struct ReviewBar: View {
     let document: Document
 
     var body: some View {
-        if let current = document.current, current.kind == .removed, document.review.changes.contains(current) {
-            HStack(spacing: 6) {
-                Image(systemName: "minus.circle.fill").foregroundStyle(.red)
-                Text("Removed: “\(current.oldText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))”")
-                    .lineLimit(1).truncationMode(.tail).foregroundStyle(.secondary)
+        let changes = document.review.changes
+        if !changes.isEmpty {
+            let current = document.currentChange
+            let text = ReviewBarText(changes: changes, current: current)
+            VStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    HStack(spacing: 2) {
+                        Button { document.step(forward: false) } label: { Label("Previous Change", systemImage: "chevron.up").frame(width: 14) }
+                            .help("Previous Change (⌥⌘↑)")
+                        Button { document.step(forward: true) } label: { Label("Next Change", systemImage: "chevron.down").frame(width: 14) }
+                            .help("Next Change (⌥⌘↓)")
+                    }
+                    Circle().fill(current?.kind.color ?? .secondary).frame(width: 7, height: 7)
+                        .accessibilityHidden(true)
+                    Text(text.position).monospacedDigit().lineLimit(1).layoutPriority(1)
+                    if let detail = text.detail {
+                        Text(detail).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+                    }
+                    Spacer(minLength: 8)
+                    Button("Mark Reviewed") { document.markCurrentReviewed() }
+                        .fixedSize()
+                        .disabled(current == nil)
+                        .help(current == nil ? "Step to a change first (⌥⌘↓)" : "Mark this change reviewed and go to the next (⌥⌘R)")
+                    Button("Mark All Reviewed") { document.markReviewed() }
+                        .fixedSize()
+                        .help("Mark every change reviewed (⇧⌥⌘R)")
+                }
+                .labelStyle(.iconOnly)
+                .controlSize(.small)
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.roundedRectangle(radius: 4))
+                .padding(.horizontal, 10)
+                .frame(height: 30)
+                Divider()
             }
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(.regularMaterial, in: Capsule())
-            .overlay(Capsule().strokeBorder(.separator))
-            .padding(.horizontal, 24).padding(.bottom, 12)
-            .allowsHitTesting(false)
+            .background(.bar)
         }
     }
 }
@@ -104,8 +150,11 @@ struct ReviewCommands: Commands {
                         .keyboardShortcut(.downArrow, modifiers: [.command, .option])
                     Button("Previous Change") { document?.step(forward: false) }
                         .keyboardShortcut(.upArrow, modifiers: [.command, .option])
-                    Button("Mark Reviewed") { document?.markReviewed() }
+                    Button("Mark Reviewed") { document?.markCurrentReviewed() }
                         .keyboardShortcut("r", modifiers: [.command, .option])
+                        .disabled(document?.currentChange == nil)
+                    Button("Mark All Reviewed") { document?.markReviewed() }
+                        .keyboardShortcut("r", modifiers: [.command, .option, .shift])
                 }
                 .disabled(document?.review.changes.isEmpty != false)
                 Button("Version History…") { document?.showingHistory = true }

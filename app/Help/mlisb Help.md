@@ -37,10 +37,11 @@ print("Markdown like it should be")
 
 When a file changes on disk while it is open, mlisb reloads it and marks what is different since you last looked: added lines in green, rewritten lines in amber, and a marker where lines were removed.
 
-The counts show under the window's title, for example "2 added · 1 removed". The review buttons sit in the toolbar, top right: the previous and next change, **Mark Reviewed** and **Version History**.
+While there are changes, a review bar runs across the top of the text. It shows how many there are, or, once you step to one, which change you are on and what the line said before ("Was: …", or "Removed: …" for a removal).
 
-- ⌥⌘↓ and ⌥⌘↑ step through the changes. On a removal, a note floating at the bottom of the text shows what was taken out.
-- **Mark Reviewed** (⌥⌘R) clears the marks.
+- ⌥⌘↓ and ⌥⌘↑, or the arrows in the bar, step through the changes and scroll each one into view.
+- **Mark Reviewed** (⌥⌘R) marks the change you are on as reviewed and goes to the next one.
+- **Mark All Reviewed** (⇧⌥⌘R) marks every change reviewed.
 - **Version History** (⌃⌘H) compares with an earlier version, or restores one. The words that changed are highlighted within each line; drag the window's edge to make it bigger. Versions are kept for 30 days.
 
 If you were typing when the file changed, a banner lets you keep your version or load the new one.
@@ -88,7 +89,8 @@ pbpaste | mlisb -        # read piped text
 | ⇧⌘T | Table of contents |
 | ⇧⌘M | Problems |
 | ⌥⌘↓ / ⌥⌘↑ | Next / previous change |
-| ⌥⌘R | Mark Reviewed |
+| ⌥⌘R | Mark Reviewed (the current change) |
+| ⇧⌥⌘R | Mark All Reviewed |
 | ⌃⌘H | Version history |
 | ⌘B / ⌘I / ⇧⌘X | Bold / italic / strikethrough |
 | ⌘E / ⌘K | Inline code / link |
