@@ -39,7 +39,7 @@ When a file changes on disk while it is open, mlisb reloads it and marks what is
 
 The counts and the review buttons sit in the toolbar, top right: the counts in the colours of their marks, then the previous and next change, **Mark Reviewed** and **Version History**.
 
-- ⌥⌘↓ and ⌥⌘↑ step through the changes. On a removal, a strip above the text shows what was taken out.
+- ⌥⌘↓ and ⌥⌘↑ step through the changes. On a removal, a note floating at the bottom of the text shows what was taken out.
 - **Mark Reviewed** (⌥⌘R) clears the marks.
 - **Version History** (⌃⌘H) compares with an earlier version, or restores one. The words that changed are highlighted within each line; drag the window's edge to make it bigger. Versions are kept for 30 days.
 

@@ -50,7 +50,7 @@ import Observation
 
     var isReadOnly: Bool { error != nil || isBundled }
     /// The built-in help: shown, never edited or tracked.
-    private var isBundled: Bool { FS.under(url, Bundle.main.bundleURL) }
+    var isBundled: Bool { FS.under(url, Bundle.main.bundleURL) }
     /// The sandbox has no access to this file (e.g. a link target outside what was opened).
     private(set) var needsAccess = false
 

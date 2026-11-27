@@ -2,7 +2,7 @@ import MlisbKit
 import SwiftUI
 
 extension View {
-    /// Change marks over the editor, the removed-text strip and the history sheet.
+    /// Change marks over the editor and the history sheet.
     func reviewUI(_ document: Document) -> some View { modifier(ReviewModifier(document: document)) }
 }
 
@@ -12,7 +12,6 @@ private struct ReviewModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(ReviewHost(changes: document.review.changes))
-            .safeAreaInset(edge: .top, spacing: 0) { RemovedStrip(document: document) }
             .sheet(isPresented: $document.showingHistory) { HistoryView(document: document) }
     }
 }
@@ -58,9 +57,11 @@ struct ReviewToolbar: ToolbarContent {
                     .help("Clear the change marks (⌥⌘R)")
             }
         }
-        ToolbarItem {
-            Button { document.showingHistory = true } label: { Label("Version History", systemImage: "clock.arrow.circlepath") }
-                .help("Version History (⌃⌘H)")
+        if !document.isBundled {
+            ToolbarItem {
+                Button { document.showingHistory = true } label: { Label("Version History", systemImage: "clock.arrow.circlepath") }
+                    .help("Version History (⌃⌘H)")
+            }
         }
     }
 }
@@ -94,7 +95,9 @@ private struct ReviewSummary: View {
 }
 
 /// What a removal took out, while the selected change is one; the margin only shows where.
-private struct RemovedStrip: View {
+/// Floats over the editor so stepping on and off a removal doesn't move the text; `reveal` keeps
+/// 80pt clear below the change, more than this takes.
+struct RemovedNote: View {
     let document: Document
 
     var body: some View {
@@ -103,10 +106,12 @@ private struct RemovedStrip: View {
                 Image(systemName: "minus.circle.fill").foregroundStyle(.red)
                 Text("Removed: “\(current.oldText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))”")
                     .lineLimit(1).truncationMode(.tail).foregroundStyle(.secondary)
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 10).padding(.vertical, 5)
-            .background(.bar)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(.separator))
+            .padding(.horizontal, 24).padding(.bottom, 12)
+            .allowsHitTesting(false)
         }
     }
 }
@@ -128,7 +133,7 @@ struct ReviewCommands: Commands {
                 .disabled(document?.review.changes.isEmpty != false)
                 Button("Version History…") { document?.showingHistory = true }
                     .keyboardShortcut("h", modifiers: [.control, .command])
-                    .disabled(document == nil)
+                    .disabled(document == nil || document?.isBundled == true)
             }
         }
     }
