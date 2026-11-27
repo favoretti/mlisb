@@ -106,26 +106,27 @@ struct ReviewBar: View {
             VStack(spacing: 0) {
                 HStack(spacing: 8) {
                     HStack(spacing: 2) {
-                        Button { document.step(forward: false) } label: { Image(systemName: "chevron.up").frame(width: 14) }
+                        Button { document.step(forward: false) } label: { Label("Previous Change", systemImage: "chevron.up").frame(width: 14) }
                             .help("Previous Change (⌥⌘↑)")
-                            .accessibilityLabel("Previous Change")
-                        Button { document.step(forward: true) } label: { Image(systemName: "chevron.down").frame(width: 14) }
+                        Button { document.step(forward: true) } label: { Label("Next Change", systemImage: "chevron.down").frame(width: 14) }
                             .help("Next Change (⌥⌘↓)")
-                            .accessibilityLabel("Next Change")
                     }
                     Circle().fill(current?.kind.color ?? .secondary).frame(width: 7, height: 7)
                         .accessibilityHidden(true)
-                    Text(text.position).monospacedDigit().fixedSize()
+                    Text(text.position).monospacedDigit().lineLimit(1).layoutPriority(1)
                     if let detail = text.detail {
                         Text(detail).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
                     }
                     Spacer(minLength: 8)
                     Button("Mark Reviewed") { document.markCurrentReviewed() }
+                        .fixedSize()
                         .disabled(current == nil)
                         .help(current == nil ? "Step to a change first (⌥⌘↓)" : "Mark this change reviewed and go to the next (⌥⌘R)")
                     Button("Mark All Reviewed") { document.markReviewed() }
+                        .fixedSize()
                         .help("Mark every change reviewed (⇧⌥⌘R)")
                 }
+                .labelStyle(.iconOnly)
                 .controlSize(.small)
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.roundedRectangle(radius: 4))
