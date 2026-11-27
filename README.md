@@ -70,10 +70,10 @@ rendered and source.
 
 When a file changes on disk while it is open, mlisb reloads it without asking and marks what is
 different since you last looked: added lines in green, rewritten lines in amber with the changed
-words highlighted, and a marker where lines were removed. The counts and the review buttons sit in
-the toolbar. Step through the changes with ⌥⌘↓ and ⌥⌘↑, then press **Mark Reviewed** (⌥⌘R).
+words highlighted, and a marker where lines were removed. The counts show under the window's title
+and the review buttons sit in the toolbar. Step through the changes with ⌥⌘↓ and ⌥⌘↑, then press **Mark Reviewed** (⌥⌘R).
 
-<img src="docs/screenshots/review.webp" width="100%" alt="A rollout plan after an agent edited it: one task newly checked off, a sentence with its changed words highlighted, a whole new Rollback section marked in green, and a bar at the bottom reading 2 added, 2 changed, 1 removed with a Mark Reviewed button">
+<img src="docs/screenshots/review.webp" width="100%" alt="A rollout plan after an agent edited it: one task newly checked off, a sentence with its changed words highlighted, and a whole new Rollback section marked in green">
 
 - **Nothing is overwritten.** If you were typing when the file changed, a banner lets you keep your
   version or load the new one.

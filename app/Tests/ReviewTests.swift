@@ -95,6 +95,12 @@ import XCTest
         XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "old\n")
     }
 
+    func testSubtitleNamesOnlyTheKindsThereAre() {
+        XCTAssertEqual(reviewSubtitle((added: 2, modified: 8, removed: 0)), "2 added · 8 changed")
+        XCTAssertEqual(reviewSubtitle((added: 0, modified: 0, removed: 1)), "1 removed")
+        XCTAssertEqual(reviewSubtitle((added: 0, modified: 0, removed: 0)), "")
+    }
+
     func testEditRangeDoesNotSplitSurrogatePairs() {
         let e = Document.edit("a😀b", "a😁b")
         XCTAssertEqual(e.range, NSRange(location: 1, length: 2))
