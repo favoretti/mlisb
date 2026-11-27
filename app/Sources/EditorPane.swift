@@ -79,7 +79,7 @@ struct EditorPane: View {
             ? LineNumbers.gutterWidth(digits: lineDigits, textSize: CGFloat(ReadingSettings.clamp(textSize))) : 0
         let inset = ReadingSettings.sideInset(paneWidth: width, width: lineWidth, gutter: gutter)
         config.textInsets = TextInsets(horizontal: inset, vertical: 12)
-        config.wideTableOverflow = inset - ReadingSettings.sidePadding - gutter
+        config.wideTableOverflow = ReadingSettings.wideOverflow(inset: inset)
         // Nothing may change what the user typed.
         config.lists.arrowReplacementEnabled = false
         config.spellChecking.automaticQuoteSubstitution = false

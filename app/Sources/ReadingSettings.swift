@@ -15,6 +15,9 @@ enum ReadingSettings {
         guard let points = width.points else { return sidePadding + gutter }
         return max(sidePadding + gutter, (paneWidth - points) / 2)
     }
+
+    /// Room wide blocks reach past the column's right edge, out to the side padding; the gutter is on the left.
+    static func wideOverflow(inset: CGFloat) -> CGFloat { inset - sidePadding }
 }
 
 enum LineWidth: String, CaseIterable, Identifiable {
