@@ -74,7 +74,7 @@ words highlighted, and a marker where lines were removed. A review bar across th
 counts them and shows what a changed line said before. Step through the changes with ⌥⌘↓ and ⌥⌘↑,
 mark each one reviewed with ⌥⌘R, or all of them with ⇧⌥⌘R.
 
-<img src="docs/screenshots/review.webp" width="100%" alt="A rollout plan after an agent edited it: one task newly checked off, a sentence with its changed words highlighted, and a whole new Rollback section marked in green">
+<img src="docs/screenshots/review.webp" width="100%" alt="A rollout plan after an agent edited it. A review bar above the text reads Change 1 of 4, changed, and quotes the line as it was, with Mark Reviewed and Mark All Reviewed on the right. Below it, one task newly checked off, a sentence with its changed words highlighted, and a whole new Rollback section marked in green">
 
 - **Nothing is overwritten.** If you were typing when the file changed, a banner lets you keep your
   version or load the new one.
