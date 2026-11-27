@@ -95,10 +95,28 @@ import XCTest
         XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "old\n")
     }
 
-    func testSubtitleNamesOnlyTheKindsThereAre() {
-        XCTAssertEqual(reviewSubtitle((added: 2, modified: 8, removed: 0)), "2 added · 8 changed")
-        XCTAssertEqual(reviewSubtitle((added: 0, modified: 0, removed: 1)), "1 removed")
-        XCTAssertEqual(reviewSubtitle((added: 0, modified: 0, removed: 0)), "")
+    func testBarCountsUntilAChangeIsSelected() {
+        let changes = TextDiff.changes(from: "a\nb\nc\nd\n", to: "a\nB\nc\nnew\n")
+        XCTAssertEqual(ReviewBarText(changes: changes, current: nil).position, "2 changed")
+        XCTAssertNil(ReviewBarText(changes: changes, current: nil).detail)
+        let second = ReviewBarText(changes: changes, current: changes[1])
+        XCTAssertEqual(second.position, "Change 2 of 2 · changed")
+        XCTAssertEqual(second.detail, "Was: “d”")
+        let removal = TextDiff.changes(from: "a\nold\nline\nb\n", to: "a\nb\n")
+        XCTAssertEqual(ReviewBarText(changes: removal, current: removal[0]).detail, "Removed: “old line”")
+    }
+
+    func testMarkingTheCurrentChangeKeepsTheOthersAcrossReopening() async throws {
+        try write("one\ntwo\nthree\n")
+        let d = open()
+        try await external(d, "ONE\ntwo\nTHREE\n")
+        XCTAssertEqual(d.review.changes.count, 2)
+        XCTAssertFalse(d.review.changes.isEmpty)
+        d.current = d.review.changes[0]
+        d.markCurrentReviewed()
+        XCTAssertEqual(d.review.changes.count, 1)
+        XCTAssertEqual(d.review.changes.first?.oldText, "three\n")
+        XCTAssertEqual(open().review.changes.map(\.oldText), ["three\n"])
     }
 
     func testEditRangeDoesNotSplitSurrogatePairs() {

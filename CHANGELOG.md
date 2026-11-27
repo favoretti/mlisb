@@ -6,6 +6,19 @@ What changed in each released version of mlisb, newest first. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Reviewing changes happens in a review bar across the top of the text, there whenever a file has
+  unreviewed changes. It counts them, says which one you are on, and shows what a changed or removed
+  line said before. The review buttons left the toolbar; Version History stays there.
+- **Mark Reviewed** (⌥⌘R) marks only the change you are on and goes to the next one.
+  **Mark All Reviewed** (⇧⌥⌘R) marks them all.
+
+### Fixed
+
+- Stepping to the next or previous change scrolls it into view, and so do jumps from the Table of
+  Contents and `mlisb file.md:N` to a place off screen. They selected the text without scrolling to it.
+
 ## [0.1.15] - 2026-11-27
 
 ### Changed
