@@ -23,4 +23,18 @@ final class ReadingSettingsTests: XCTestCase {
         // A pane narrower than the column keeps only the padding.
         XCTAssertEqual(ReadingSettings.sideInset(paneWidth: 500, width: .wide), 28)
     }
+
+    func testLineNumbersLeaveWideBlocksInPlaceWhenTheColumnStays() {
+        let off = ReadingSettings.sideInset(paneWidth: 1400, width: .medium, gutter: 0)
+        let on = ReadingSettings.sideInset(paneWidth: 1400, width: .medium, gutter: 20)
+        XCTAssertEqual(off, on)
+        XCTAssertEqual(ReadingSettings.wideOverflow(inset: off), ReadingSettings.wideOverflow(inset: on))
+    }
+
+    func testWideBlocksReachThePaddingAtFullWidthWithLineNumbers() {
+        for gutter: CGFloat in [0, 20] {
+            let inset = ReadingSettings.sideInset(paneWidth: 1000, width: .full, gutter: gutter)
+            XCTAssertEqual(1000 - inset + ReadingSettings.wideOverflow(inset: inset), 1000 - ReadingSettings.sidePadding)
+        }
+    }
 }

@@ -7,6 +7,7 @@ struct MlisbApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage("sourceMode") private var sourceMode = false
     @AppStorage("showOutline") private var showOutline = false
+    @AppStorage("showLineNumbers") private var showLineNumbers = false
     @AppStorage("textSize") private var textSize = ReadingSettings.defaultSize
     @AppStorage("inspectorTab") private var inspectorTab = InspectorTab.contents
 
@@ -37,6 +38,7 @@ struct MlisbApp: App {
             }
             CommandGroup(before: .sidebar) {
                 Toggle("Source Mode", isOn: $sourceMode).keyboardShortcut("/")
+                Toggle("Line Numbers", isOn: $showLineNumbers).keyboardShortcut("l", modifiers: [.command, .option])
                 Toggle("Table of Contents", isOn: Binding(
                     get: { showOutline }, set: { showOutline = $0; if $0 { inspectorTab = .contents } })).keyboardShortcut("t", modifiers: [.command, .shift])
                 Divider()

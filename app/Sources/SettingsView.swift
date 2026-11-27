@@ -6,6 +6,7 @@ struct SettingsView: View {
 #endif
     @AppStorage("textSize") private var textSize = ReadingSettings.defaultSize
     @AppStorage("lineWidth") private var lineWidth = LineWidth.medium
+    @AppStorage("showLineNumbers") private var showLineNumbers = false
     @State private var reopensWindows = Session.reopensWindows
     @AppStorage("openIn") private var openIn = OpenIn.tab
     @AppStorage("tabLayout") private var tabLayout = TabLayout.top
@@ -32,6 +33,7 @@ struct SettingsView: View {
                 Picker("Line width", selection: $lineWidth) {
                     ForEach(LineWidth.allCases) { Text($0.label).tag($0) }
                 }
+                Toggle("Show line numbers", isOn: $showLineNumbers)
             }
             SetupSettings()
 #if canImport(Sparkle)
